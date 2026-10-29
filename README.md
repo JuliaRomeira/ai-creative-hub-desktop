@@ -43,6 +43,10 @@ Capturas do aplicativo Electron durante o teste automatizado. **Ateliê Aurora �
 
 O rascunho é uma versão revisada manualmente: mudanças na marca ou nas decisões não o substituem automaticamente. O botão de atualização pede confirmação antes de sobrescrever edições.
 
+## Baixar para Windows
+
+Na [página da versão 0.1.0](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases/tag/v0.1.0), baixe `AI.Creative.Hub.0.1.0.exe` e execute. É a distribuição portátil para Windows x64, sem necessidade de instalar Node.js. O aplicativo não é assinado digitalmente e não possui atualizador automático.
+
 ## Instalar e executar pelo código
 
 Requisitos: Windows, Git e Node.js **22.12 ou superior**. Validado no Windows com Node.js 24.22.1. A primeira instalação precisa de internet para baixar as dependências e o Electron.
