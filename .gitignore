@@ -8,3 +8,6 @@ playwright-report/
 *.backup.json
 data/
 coverage/
+backend/target/
+.idea/
+*.iml

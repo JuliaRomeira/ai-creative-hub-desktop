@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Client, Campaign, Decision, Workspace } from "./types";
-import { prepareContext } from "./context";
 import "./style.css";
 
 const clientFields = {
@@ -696,8 +695,12 @@ function App() {
                             "Atualizar o texto com os dados atuais? Isso substitui suas edições neste contexto.",
                           )
                         ) {
-                          setDraft(prepareContext(client, campaign, data));
-                          setDirty(true);
+                          run(async () => {
+                            setDraft(
+                              await window.hub.context(client.id, campaign.id),
+                            );
+                            setDirty(true);
+                          });
                         }
                       }}
                     >

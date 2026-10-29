@@ -48,6 +48,7 @@ declare global {
     hub: {
       read(): Promise<Workspace>;
       update(type: string, input: unknown): Promise<Workspace>;
+      context(clientId: string, campaignId: string): Promise<string>;
       attach(id: string): Promise<Workspace | null>;
       saveReference(id: string): Promise<boolean>;
       copy(text: string): Promise<boolean>;

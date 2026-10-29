@@ -231,6 +231,9 @@ test("Fluxo desktop: clientes, decisões, anexos, reinício, cópia e restauraç
     await page
       .getByRole("button", { name: "Atualizar com dados atuais" })
       .click();
+    await expect(page.getByLabel("Texto do contexto")).toHaveValue(
+      /CONTEXTO CRIATIVO/,
+    );
     const isolated = await page.getByLabel("Texto do contexto").inputValue();
     expect(isolated).toContain("Preferir fundos areia");
     expect(isolated).not.toContain("Mostrar detalhes de textura");
@@ -248,6 +251,59 @@ test("Fluxo desktop: clientes, decisões, anexos, reinício, cópia e restauraç
     throw error;
   } finally {
     if (app) await app.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("Base 0.1.0 abre sem conversão e cria snapshot ao editar pelo Java", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "aich-legacy-ui-"));
+  const workspace = path.join(root, "workspace");
+  fs.mkdirSync(workspace);
+  const original = fs.readFileSync(
+    path.join(__dirname, "fixtures/legacy-v1.json"),
+  );
+  fs.writeFileSync(path.join(workspace, "workspace.json"), original);
+  const env = { ...process.env, AICH_TEST_DATA: root };
+  delete env.ELECTRON_RUN_AS_NODE;
+  const app = await electron.launch({
+    args: process.env.AICH_EXECUTABLE ? [] : ["."],
+    executablePath: process.env.AICH_EXECUTABLE || undefined,
+    cwd: path.resolve(__dirname, ".."),
+    env,
+  });
+  try {
+    const page = await app.firstWindow();
+    page.on("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: /Marca Legada Fictícia/ }).click();
+    await page.getByRole("button", { name: /Campanha legada/ }).click();
+    await page.getByRole("tab", { name: "Contexto", exact: true }).click();
+    await expect(page.getByLabel("Texto do contexto")).toHaveValue(
+      "Rascunho editado na versão anterior.",
+    );
+    expect(fs.readFileSync(path.join(workspace, "workspace.json"))).toEqual(
+      original,
+    );
+    await page
+      .getByRole("button", { name: "Atualizar com dados atuais" })
+      .click();
+    await expect(page.getByLabel("Texto do contexto")).toHaveValue(
+      /Regra permanente válida/,
+    );
+    await page.getByRole("button", { name: "Salvar rascunho" }).click();
+    await expect(
+      page.getByText("Rascunho salvo.", { exact: true }),
+    ).toBeVisible();
+    expect(
+      fs.readFileSync(path.join(workspace, "workspace.json.before-java-v020")),
+    ).toEqual(original);
+    await page.getByRole("tab", { name: "Referências" }).click();
+    await expect(
+      page.getByRole("img", { name: "referencia.png", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("tab", { name: "Decisões" }).click();
+    await expect(page.locator(".decision")).toHaveCount(3);
+  } finally {
+    await app.close();
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

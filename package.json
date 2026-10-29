@@ -1,6 +1,6 @@
 {
   "name": "ai-creative-hub-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,12 +9,14 @@
   "description": "Clientes, campanhas e contexto criativo em um aplicativo desktop local.",
   "main": "electron/main.cjs",
   "scripts": {
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run build:java && tsc --noEmit && vite build",
     "start": "npm run build && electron .",
-    "test": "node --test tests/store.test.cjs",
+    "test": "npm run test:java && npm run build:java && node --test tests/backend.test.cjs",
     "test:e2e": "npm run build && playwright test",
     "check": "npm run test && npm run test:e2e",
-    "package": "npm run build && electron-builder --win portable"
+    "package": "npm run build && electron-builder --win portable",
+    "build:java": "node scripts/java-build.cjs",
+    "test:java": "node scripts/java-build.cjs --test"
   },
   "build": {
     "appId": "io.github.juliaromeira.aicreativehub",
@@ -30,13 +32,17 @@
     "win": {
       "target": "portable",
       "signAndEditExecutable": false
-    }
+    },
+    "extraResources": [
+      {
+        "from": "backend/target/creative-hub-backend.jar",
+        "to": "backend/creative-hub-backend.jar"
+      }
+    ]
   },
   "dependencies": {
     "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "write-file-atomic": "^8.0.0",
-    "zod": "^4.6.7"
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

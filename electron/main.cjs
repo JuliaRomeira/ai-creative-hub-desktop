@@ -7,18 +7,35 @@ const {
   session,
 } = require("electron");
 const path = require("node:path");
-const fs = require("node:fs");
 const { pathToFileURL } = require("node:url");
-const { Store } = require("./store.cjs");
+const { JavaBackend } = require("./java-backend.cjs");
 if (process.env.AICH_TEST_DATA)
   app.setPath("userData", process.env.AICH_TEST_DATA);
 const locked = app.requestSingleInstanceLock();
 if (!locked) app.quit();
 let win;
+let backend;
+let quitting = false;
 const page = pathToFileURL(path.join(__dirname, "../dist/index.html")).href;
 if (locked)
-  app.whenReady().then(() => {
-    const store = new Store(path.join(app.getPath("userData"), "workspace"));
+  app.whenReady().then(async () => {
+    const jar = app.isPackaged
+      ? path.join(process.resourcesPath, "backend", "creative-hub-backend.jar")
+      : path.join(__dirname, "../backend/target/creative-hub-backend.jar");
+    backend = new JavaBackend(
+      path.join(app.getPath("userData"), "workspace"),
+      jar,
+    );
+    try {
+      await backend.request("health");
+    } catch (error) {
+      dialog.showErrorBox(
+        "Não foi possível iniciar o AI Creative Hub",
+        error.message,
+      );
+      app.quit();
+      return;
+    }
     session.defaultSession.setPermissionRequestHandler(
       (_wc, _permission, callback) => callback(false),
     );
@@ -39,8 +56,13 @@ if (locked)
         }
       });
     }
-    handle("read", () => store.read());
-    handle("update", (type, input) => store.update(type, input));
+    handle("read", () => backend.request("read"));
+    handle("update", (type, input) =>
+      backend.request("update", { type, input }),
+    );
+    handle("context", (clientId, campaignId) =>
+      backend.request("context", { clientId, campaignId }),
+    );
     handle("attach", async (clientId) => {
       const result = await dialog.showOpenDialog(win, {
         title: "Adicionar referências",
@@ -54,17 +76,15 @@ if (locked)
       });
       return result.canceled
         ? null
-        : store.addReferences(clientId, result.filePaths);
+        : backend.request("attach", { clientId, files: result.filePaths });
     });
     handle("save-reference", async (id) => {
-      const ref = store.read().references.find((x) => x.id === id);
-      if (!ref) throw new Error("Referência não encontrada.");
+      const name = await backend.request("reference-name", { id });
       const result = await dialog.showSaveDialog(win, {
-        defaultPath: path.basename(ref.name),
+        defaultPath: path.basename(name),
       });
       if (result.canceled) return false;
-      fs.writeFileSync(result.filePath, Buffer.from(ref.data, "base64"));
-      return true;
+      return backend.request("save-reference", { id, path: result.filePath });
     });
     handle("copy", (value) => {
       if (typeof value !== "string" || value.length > 200000)
@@ -78,8 +98,7 @@ if (locked)
         filters: [{ name: "Backup JSON", extensions: ["json"] }],
       });
       if (result.canceled) return false;
-      store.export(result.filePath);
-      return true;
+      return backend.request("export", { path: result.filePath });
     });
     handle("import", async () => {
       const result = await dialog.showOpenDialog(win, {
@@ -87,7 +106,7 @@ if (locked)
         filters: [{ name: "Backup JSON", extensions: ["json"] }],
       });
       if (result.canceled) return null;
-      store.readFile(result.filePaths[0]);
+      await backend.request("validate-backup", { path: result.filePaths[0] });
       const confirm = await dialog.showMessageBox(win, {
         type: "warning",
         message: "Restaurar este backup?",
@@ -97,7 +116,9 @@ if (locked)
         defaultId: 0,
         cancelId: 0,
       });
-      return confirm.response === 1 ? store.restore(result.filePaths[0]) : null;
+      return confirm.response === 1
+        ? backend.request("import", { path: result.filePaths[0] })
+        : null;
     });
     win = new BrowserWindow({
       width: 1320,
@@ -124,3 +145,9 @@ app.on("second-instance", () => {
   }
 });
 app.on("window-all-closed", () => app.quit());
+app.on("before-quit", (event) => {
+  if (quitting || !backend) return;
+  event.preventDefault();
+  quitting = true;
+  backend.close().finally(() => app.quit());
+});
