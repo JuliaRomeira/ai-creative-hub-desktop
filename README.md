@@ -2,6 +2,8 @@
 
 **Em desenvolvimento — primeira versão funcional**
 
+Versão **0.2.0**: back-end Java 17, mantendo React/TypeScript e o aplicativo desktop Electron.
+
 Um espaço local para organizar clientes, campanhas, referências e decisões e preparar um contexto consistente para usar em diferentes ferramentas de IA.
 
 ## Por que existe
@@ -45,11 +47,13 @@ O rascunho é uma versão revisada manualmente: mudanças na marca ou nas decis�
 
 ## Baixar para Windows
 
-Na [página da versão 0.1.0](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases/tag/v0.1.0), baixe `AI.Creative.Hub.0.1.0.exe` e execute. É a distribuição portátil para Windows x64, sem necessidade de instalar Node.js. O aplicativo não é assinado digitalmente e não possui atualizador automático.
+As distribuições ficam na [página de versões](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases). A versão **0.2.0 exige Java 17 ou superior instalado**, disponível pelo `PATH` ou por `JAVA_HOME`. O executável inclui o back-end compilado, mas não inclui o ambiente Java. Node.js e Maven não são necessários para usar o executável.
+
+Abra apenas o `.exe`: ele inicia a interface e o Java automaticamente. O aplicativo não é assinado digitalmente e não possui atualizador automático. A distribuição antiga **0.1.0 não usa Java**.
 
 ## Instalar e executar pelo código
 
-Requisitos: Windows, Git e Node.js **22.12 ou superior**. Validado no Windows com Node.js 24.22.1. A primeira instalação precisa de internet para baixar as dependências e o Electron.
+Requisitos: Windows, Git, Node.js **22.12 ou superior** e **JDK 17 ou superior** (incluindo `javac`). Validado localmente com Node.js 24.22.1 e JDK 17.0.12. Use uma distribuição JDK atualizada da linha 17 ou superior. Maven é baixado automaticamente pelo wrapper do projeto; não é necessário instalar Maven globalmente. A primeira instalação precisa de internet para baixar dependências, Maven e Electron.
 
 ```powershell
 git clone https://github.com/JuliaRomeira/ai-creative-hub-desktop.git
@@ -58,7 +62,9 @@ npm ci
 npm start
 ```
 
-`npm start` verifica o TypeScript, compila a interface e abre o aplicativo desktop. Não é um site hospedado e não exige servidor ou chave de API.
+`npm start` compila o Java em um JAR, verifica o TypeScript, compila a interface e abre o Electron. O Electron inicia `java -jar` e aguarda a resposta de inicialização antes de abrir a janela. Ao fechar o aplicativo, encerra a comunicação e o Java libera o arquivo de bloqueio e sai. Não é um site hospedado e não exige servidor ou chave de API.
+
+Se o Java não for encontrado, confira `java -version` e `javac -version` em um novo terminal. `JAVA_HOME`, quando configurado, deve apontar para a pasta do JDK, não para `bin`. Não é necessário iniciar dois terminais nem abrir o back-end manualmente.
 
 Para gerar a distribuição portátil do Windows:
 
@@ -70,13 +76,13 @@ O executável é gerado em `release/`. Não é assinado digitalmente. A distribu
 
 ## Dados e backup
 
-O processo principal do Electron salva `workspace/workspace.json` dentro do diretório `userData`. No Windows, o caminho padrão desta versão é:
+O Java salva `workspace/workspace.json` no diretório informado pelo Electron, mantendo o mesmo `userData` da versão anterior. No Windows, o caminho padrão é:
 
 ```text
 %APPDATA%\ai-creative-hub-desktop\workspace\workspace.json
 ```
 
-Os anexos são copiados para a base em Base64; o arquivo original pode ser movido ou removido. A gravação usa arquivo temporário, sincronização em disco e substituição atômica. Uma cópia `workspace.json.previous` guarda o estado anterior à última gravação. Só uma instância do aplicativo pode gravar na base de cada vez.
+Os anexos são copiados para a base em Base64; o arquivo original pode ser movido ou removido. A gravação usa arquivo temporário, sincronização em disco e substituição atômica com Java NIO. Se o sistema de arquivos não permitir substituição atômica, a operação falha em vez de usar uma gravação menos segura. Uma cópia `workspace.json.previous` guarda o estado anterior à última gravação. O Electron limita as instâncias, e o Java também mantém um bloqueio de arquivo para evitar dois escritores na mesma base.
 
 **Exportar backup** salva um JSON com clientes, campanhas, decisões, rascunhos e anexos. Guarde uma cópia fora do computador. **Restaurar backup** valida a versão e as relações antes de substituir a base; não mescla dados. Uma cópia `workspace.json.before-restore-*` preserva o estado anterior à restauração, além da cópia da última gravação.
 
@@ -84,18 +90,45 @@ Se a base não puder ser lida, o aplicativo exibe o erro sem reinicializá-la. �
 
 Limites explícitos da primeira versão: **10 MB por referência e 100 MB para a base/backup JSON**, incluindo o aumento de tamanho do Base64. Esta arquitetura prioriza uma base pequena e simples; não é destinada a bibliotecas grandes de mídia.
 
+### Compatibilidade com a versão anterior
+
+Não há conversão de banco: o contrato JSON continua com `version: 1`. Clientes, campanhas, decisões, datas, rascunhos e anexos existentes são lidos pelo Java. Apenas abrir a base não a regrava.
+
+Antes da primeira gravação Java sobre um arquivo existente, é criada a cópia **`workspace.json.before-java-v020`**, preservando os bytes originais. Ela não é sobrescrita por edições seguintes. A base fictícia gerada pela implementação 0.1.0 foi usada nos testes de compatibilidade; nenhum banco pessoal foi usado nos testes. Exporte um backup antes de atualizar, feche a versão anterior e não execute versões diferentes simultaneamente sobre a mesma base.
+
+Para recuperar o estado anterior, faça uma cópia do snapshot para outra pasta, acrescente a extensão `.json` e use **Restaurar backup**. Restauração substitui os dados atuais, não mescla as alterações feitas depois.
+
 ## Arquitetura
 
 | Camada | Responsabilidade |
 | --- | --- |
-| React + TypeScript, em `src/` | Formulários, navegação, revisão e montagem determinística do contexto |
-| Electron, em `electron/main.cjs` | Janela, diálogos de arquivo, área de transferência e operações autorizadas |
+| React + TypeScript, em `src/` | Formulários, navegação e revisão do texto retornado pelo Java |
+| Electron, em `electron/main.cjs` | Janela, diálogos de arquivo, área de transferência e ciclo de vida do Java |
 | Preload isolado | Ponte restrita entre a interface e o processo principal |
-| `electron/store.cjs` | Esquema versionado com Zod, validação, histórico, arquivos e gravação atômica |
+| `electron/java-backend.cjs` | Transporte de pedidos e respostas, detecção de falhas e prazo de resposta |
+| Java, em `backend/src/main/java/` | Modelos, validação, cadastros, histórico, anexos, persistência e preparação de contexto |
+| Gson | Leitura e escrita JSON compatível com os arquivos anteriores |
+| Maven Wrapper | Compilação, dependências Java, JUnit e empacotamento do JAR |
 | Vite | Compilação local da interface |
-| Node Test + Playwright | Testes de armazenamento e fluxo no Electron real |
+| JUnit + Node Test + Playwright | Regras Java, comunicação entre processos e fluxos no Electron real |
 
-A interface não acessa o Node diretamente: usa isolamento de contexto, sandbox e uma ponte limitada. Navegações e novas janelas são bloqueadas; a política de conteúdo não permite conexões externas. A preparação de contexto está separada em `src/context.ts`, permitindo futuras integrações sem simular IA nesta versão.
+A interface não acessa o Node diretamente: usa isolamento de contexto, sandbox e uma ponte limitada. Navegações e novas janelas são bloqueadas; a política de conteúdo não permite conexões externas. A implementação antiga de armazenamento Node e a montagem de contexto em TypeScript foram removidas, evitando regras duplicadas.
+
+```text
+React/TypeScript → preload → Electron → stdin/stdout → Java
+                                                      ├─ WorkspaceService
+                                                      ├─ ContextService
+                                                      ├─ WorkspaceValidator
+                                                      └─ WorkspaceRepository → JSON local
+```
+
+Cada pedido e resposta ocupa uma linha JSON com identificador. O canal são os pipes privados do processo filho: **não há HTTP, porta aberta, API externa ou serviço em nuvem**. Os caminhos escolhidos nos diálogos nativos são encaminhados ao Java, responsável por validar e ler/gravar os arquivos. O back-end executa os pedidos em sequência para evitar gravações concorrentes.
+
+**Por que sem Spring Boot?** O produto atual é local, monousuário e não precisa de servidor HTTP. Java puro com Maven e Gson reduz a configuração e deixa classes, coleções, validação, exceções e persistência visíveis para estudo. Spring Boot faria sentido se surgir uma necessidade concreta de API compartilhada, autenticação ou aplicação web. Ele não é necessário para praticar Java nesta etapa.
+
+## Por onde estudar Java
+
+Abra `backend/pom.xml` no IntelliJ como projeto Maven e selecione JDK 17 ou superior. Siga o [roteiro de estudo Java](docs/ESTUDAR-JAVA.md), começando pelos modelos e pelo `ContextService`, antes de avançar para persistência e comunicação entre processos.
 
 ## Verificação
 
@@ -106,6 +139,8 @@ npm run package
 ```
 
 O teste end-to-end abre o Electron, preenche a interface e usa diretórios temporários com dados fictícios. As caixas nativas de seleção de arquivo e confirmação são substituídas por respostas determinísticas durante o teste; a leitura, gravação e restauração dos arquivos são reais.
+
+`npm run check` executa **9 testes JUnit, 3 testes da ponte Node/Java e 2 fluxos end-to-end**, além da compilação Java/TypeScript. Para estudar somente o Java: `npm run test:java` ou, dentro de `backend`, `.\mvnw.cmd test`.
 
 Cobertura da entrega:
 
@@ -119,6 +154,10 @@ Cobertura da entrega:
 - Rejeição de backup malformado sem perda da base atual.
 - Validação de referências órfãs, identificadores duplicados, versões desconhecidas e limite por anexo.
 - Compilação TypeScript e verificação de ausência de rolagem horizontal em janela de 900 × 700.
+- Base 0.1.0 aberta sem regravação e snapshot original comparado byte a byte após editar pelo Java.
+- Separação do contexto por campanha, preservando regras permanentes.
+- Inicialização/encerramento do Java, comunicação concorrente, Java ausente e queda do processo.
+- Bloqueio de segundo escritor e proteção contra exportação sobre o arquivo interno.
 
 As capturas em `docs/` são geradas pelo próprio teste. Bancos, backups, dependências, executáveis e resultados temporários não entram no Git.
 
@@ -131,6 +170,8 @@ As capturas em `docs/` são geradas pelo próprio teste. Bancos, backups, depend
 - PDFs não têm visualizador embutido. Use **Salvar cópia** e abra no leitor de PDF.
 - Armazenamento JSON com anexos em memória durante o uso, adequado a projetos pequenos dentro dos limites acima.
 - Distribuição Windows sem assinatura; macOS e Linux não foram validados.
+- O ambiente Java não é incluído no executável; instalação de Java 17+ é requisito real.
+- Bibliotecas grandes de mídia e uso prolongado com base próxima do limite ainda não foram validados. A JVM tem limite de heap de 512 MB e o armazenamento atual mantém o documento em memória.
 
 ### Roadmap — ainda não implementado
 
@@ -140,7 +181,8 @@ As capturas em `docs/` são geradas pelo próprio teste. Bancos, backups, depend
 - Agentes com ferramentas.
 - Integrações opcionais por API.
 - Evolução do armazenamento e do empacotamento após o uso real.
+- Distribuição com ambiente Java incluído, após definir tamanho e manutenção das atualizações.
 
 ## Referências técnicas
 
-[Segurança no Electron](https://www.electronjs.org/docs/latest/tutorial/security) · [Testes Electron com Playwright](https://playwright.dev/docs/api/class-electron)
+[Segurança no Electron](https://www.electronjs.org/docs/latest/tutorial/security) · [Testes Electron com Playwright](https://playwright.dev/docs/api/class-electron) · [Maven Wrapper](https://maven.apache.org/tools/wrapper/)
