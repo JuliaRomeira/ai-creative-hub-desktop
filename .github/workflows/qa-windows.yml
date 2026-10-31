@@ -1,0 +1,55 @@
+name: QA do aplicativo Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar-windows:
+    name: Java, interface, Electron e pacote
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependencias travadas
+        run: npm ci
+
+      - name: Testes Java, ponte e interface Electron
+        run: npm run check
+
+      - name: Gerar executavel portatil Windows
+        run: npm run package
+
+      - name: Guardar executavel para teste manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-creative-hub-windows-portable
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 7
