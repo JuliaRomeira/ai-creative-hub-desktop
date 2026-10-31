@@ -27,10 +27,25 @@ jobs:
         run: npm run check
       - name: Empacotamento portatil Windows
         run: npm run package
+      - name: Testar executavel portatil com dados ficticios
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path release -Filter '*.exe' -File | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $exe) { throw 'Executavel Windows nao encontrado.' }
+          $env:AICH_EXECUTABLE = $exe
+          npx playwright test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Executavel para teste manual
         uses: actions/upload-artifact@v4
         with:
           name: ai-creative-hub-windows-portable
           path: release/*.exe
           if-no-files-found: error
+          retention-days: 7
+      - name: Diagnostico dos testes
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-details
+          path: test-results/
           retention-days: 7
