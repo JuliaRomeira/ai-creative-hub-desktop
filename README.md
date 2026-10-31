@@ -140,7 +140,18 @@ npm run package
 
 O teste end-to-end abre o Electron, preenche a interface e usa diretórios temporários com dados fictícios. As caixas nativas de seleção de arquivo e confirmação são substituídas por respostas determinísticas durante o teste; a leitura, gravação e restauração dos arquivos são reais.
 
-`npm run check` executa **9 testes JUnit, 3 testes da ponte Node/Java e 2 fluxos end-to-end**, além da compilação Java/TypeScript. Para estudar somente o Java: `npm run test:java` ou, dentro de `backend`, `.\mvnw.cmd test`.
+`npm run check` executa **9 testes JUnit, 3 testes da ponte Node/Java e 3 fluxos end-to-end**, além da compilação Java/TypeScript. Para estudar somente o Java: `npm run test:java` ou, dentro de `backend`, `.\mvnw.cmd test`.
+
+Depois de empacotar, execute os mesmos fluxos contra o **portátil real**, em PowerShell:
+
+```powershell
+$env:AICH_EXECUTABLE = (Resolve-Path 'release\AI Creative Hub 0.2.0.exe').Path
+try { npx playwright test } finally { Remove-Item Env:AICH_EXECUTABLE }
+```
+
+O teste inicia o lançador NSIS e verifica que a aplicação está empacotada e foi aberta pelo portátil. Uma ponte em `tests/portable-launch.*` repassa ao Playwright os endereços de diagnóstico que o NSIS não encaminha pela saída padrão. As portas de diagnóstico são usadas somente nesta execução de teste, em loopback; o aplicativo aberto normalmente não as habilita. Os diálogos nativos continuam simulados. O GitHub Actions executa essa validação e disponibiliza o `.exe` como artefato por 7 dias, somente após os testes passarem.
+
+Em 31/10/2026, `npm audit --omit=dev` não apontou vulnerabilidades. A auditoria completa apontou 15 alertas moderados na cadeia de desenvolvimento do `electron-builder`, derivados de `minimatch`. A sugestão automática exige regressão para uma versão antiga do empacotador; não foi aplicada. Esses alertas continuam pendentes de uma correção compatível dos fornecedores.
 
 Cobertura da entrega:
 
@@ -152,6 +163,7 @@ Cobertura da entrega:
 - Anexo original removido e cópia salva após reinício, com comparação byte a byte.
 - Exportação e restauração em perfil vazio, incluindo anexos e histórico.
 - Rejeição de backup malformado sem perda da base atual.
+- Base corrompida preservada, cancelamento de restauração sem gravação e recuperação por backup com snapshot dos bytes anteriores.
 - Validação de referências órfãs, identificadores duplicados, versões desconhecidas e limite por anexo.
 - Compilação TypeScript e verificação de ausência de rolagem horizontal em janela de 900 × 700.
 - Base 0.1.0 aberta sem regravação e snapshot original comparado byte a byte após editar pelo Java.

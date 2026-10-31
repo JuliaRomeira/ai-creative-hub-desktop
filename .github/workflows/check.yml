@@ -42,3 +42,10 @@ jobs:
           path: release/*.exe
           if-no-files-found: error
           retention-days: 7
+      - name: Diagnostico dos testes
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-details
+          path: test-results/
+          retention-days: 7
