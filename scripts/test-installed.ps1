@@ -6,7 +6,7 @@ $installerPath = (Resolve-Path -LiteralPath $Installer).Path
 $expectedVersion = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../package.json') -Raw | ConvertFrom-Json).version
 $uninstallRoots = @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')
 function Find-Registration {
-  @($uninstallRoots | ForEach-Object { Get-ItemProperty -Path "$_\*" -ErrorAction SilentlyContinue } | Where-Object DisplayName -eq 'AI Creative Hub')
+  @($uninstallRoots | ForEach-Object { Get-ItemProperty -Path "$_\*" -ErrorAction SilentlyContinue } | Where-Object DisplayName -Match '^AI Creative Hub(?: \d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*)?$')
 }
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'AI Creative Hub.lnk'
 $menuShortcut = Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs\AI Creative Hub.lnk'
@@ -32,7 +32,10 @@ function Install-And-Test {
   if ($process.ExitCode -ne 0) { throw "Installer exited with $($process.ExitCode)." }
   if (-not (Test-Path -LiteralPath $exe)) { throw 'Installed executable missing.' }
   $registration = Find-Registration
-  if ($registration.Count -ne 1 -or $registration[0].DisplayVersion -ne $expectedVersion) { throw 'Unexpected installer registration/version.' }
+  if ($registration.Count -ne 1 -or $registration[0].DisplayVersion -ne $expectedVersion) {
+    $details = ConvertTo-Json -InputObject @($registration | Select-Object DisplayName, DisplayVersion, InstallLocation, PSPath) -Compress
+    throw "Unexpected installer registration/version. Expected one registration for $expectedVersion; found: $details"
+  }
   if (-not (Test-Path -LiteralPath $desktopShortcut) -or -not (Test-Path -LiteralPath $menuShortcut)) { throw 'Installer shortcuts missing.' }
   Assert-Preserved
   $env:AICH_DIRECT_EXECUTABLE = $exe
