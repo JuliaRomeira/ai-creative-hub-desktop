@@ -1,0 +1,40 @@
+name: Verificar agentes Codex
+on:
+  pull_request:
+    paths: ['.codex/**', 'AGENTS.md', 'docs/AGENTES.md', '.github/workflows/agents.yml']
+  push:
+    branches: [main]
+    paths: ['.codex/**', 'AGENTS.md', 'docs/AGENTES.md', '.github/workflows/agents.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar TOML e contratos das definições
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import tomllib
+          root = pathlib.Path('.codex')
+          agents = tomllib.loads((root / 'config.toml').read_text(encoding='utf-8'))['agents']
+          assert agents.get('enabled') is True, 'Os especialistas devem estar habilitados.'
+          cap = agents.get('max_concurrent_threads_per_session')
+          assert type(cap) is int and cap > 0, 'Limite de concorrência inválido.'
+          names = set()
+          for file in sorted((root / 'agents').glob('*.toml')):
+              definition = tomllib.loads(file.read_text(encoding='utf-8'))
+              for field in ('name', 'description', 'developer_instructions'):
+                  assert isinstance(definition.get(field), str) and definition[field].strip(), f'{file}: {field} ausente.'
+              name = definition['name']
+              assert name not in names, f'Nome duplicado: {name}'
+              names.add(name)
+              ignored = {'sandbox_mode', 'approval_policy', 'model_provider', 'mcp_servers'} & definition.keys()
+              assert not ignored, f'{file}: configurações da sessão não devem simular permissões do especialista: {ignored}'
+          assert names, 'Nenhuma definição encontrada.'
+          print('TOML válido:', ', '.join(sorted(names)))
+          print('A descoberta e delegação reais são verificadas no Codex local; este job não executa inferência.')
+          PY
