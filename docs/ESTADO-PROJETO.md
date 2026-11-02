@@ -38,3 +38,16 @@
 - Electron atualizado de 45.1.0 para 45.2.1. Auditoria de produção: zero vulnerabilidades. Auditoria completa: 15 moderadas na cadeia minimatch/electron-builder. Não aplicado downgrade incompatível sugerido pelo npm nem override de major sem compatibilidade comprovada.
 - CI testa Java, Node, interface, runtime, portátil real e ciclo instalação/reinstalação/desinstalação. Job descartável remove instalações Java externas antes dos E2E. Release por tag repete verificações e só publica artefatos aprovados, com checksums.
 - Autorização nesta tarefa inclui commits, PR, merge e publicação, condicionados à aprovação dos testes obrigatórios. Resultados e limitações atuais em QA.md; estado remoto ainda em verificação.
+
+## Configuração persistente de agentes — 02/11/2026
+- Análise da aplicação, persistência, IPC, interface, testes, empacotamento, Actions e roadmap indicou três especialistas: hub_developer, hub_qa e hub_windows. Arquitetura, documentação e Git/GitHub permanecem no principal; tarefas simples não exigem delegação.
+- Formato oficial atual: .codex/agents/*.toml independentes e .codex/config.toml; nenhum modelo, provider, MCP ou permissão global adicionado. Limite de três filhos, além do principal, respeitando limites menores do ambiente.
+- Arquivos e saídas compartilhadas exigem responsável único e execução serializada de dependências/build/Playwright. Uso apenas de fixtures e dados temporários; sem modificações na aplicação ou dados reais nesta configuração.
+- Codex CLI 0.164.0-alpha.11.1: configuração estrita aprovada e três tipos registrados executados em sessão nova somente leitura. Teste com --ephemeral falhou por ausência de rollout e não foi contado como aprovação; sessão normal concluiu as três tarefas e reuniu os resultados.
+- Validação TOML e workflow executada com Python 3.12.14; revisão independente de QA sem bloqueadores. Escopos, permissões reais, exemplos e limitações em docs/AGENTES.md.
+
+## Fechamento técnico da 0.3.0
+- PR #3 integrado à main em 65a43524268ebd0491fae06d2be3f21e5571c686 após CI 41530964122 aprovado.
+- Runner Windows com JDK/JRE externos removidos fisicamente: portátil 5/5, instalado 5/5, reinstalado 5/5; desinstalação preservou os bytes da base legada fictícia. Testes Java 11/11 e Node/compilação/fluxos de desenvolvimento aprovados. Nenhum dado pessoal utilizado.
+- Tag v0.3.0 criada; workflow de publicação 41533881804 repete os testes antes de disponibilizar a release. Consulte a página de Releases para o resultado definitivo e o manifesto de hashes dos artefatos publicados.
+- SmartScreen/interação manual e computador final do tio continuam fora da cobertura automatizada; assinatura digital ausente e 15 alertas moderados de desenvolvimento do empacotador permanecem documentados.
