@@ -73,3 +73,9 @@
 - Portátil 5/5; instalado 5/5; reinstalado 5/5. Instalação e versão/atalhos/registro aprovados. Desinstalação removeu programa/atalhos/registro, mantendo o hash da base legada fictícia original.
 - PR #3 integrado à main e tag v0.3.0 criada. Workflow da tag 41533881804 repete a verificação antes de publicar executáveis e hashes; uma release estável só aparece após aprovação.
 - Configuração de agentes em branch separada, sem diff em backend/src/main, src, electron, scripts de produção ou contratos. TOML válido, configuração nativa estrita aprovada, três delegações reais em Codex novo somente leitura e revisão independente sem bloqueadores. Detalhes e limitação do modo ephemeral em AGENTES.md.
+
+## Publicação confirmada — 02/11/2026
+- Release estável v0.3.0 publicada às 22:51 UTC: https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases/tag/v0.3.0 (draft=false, prerelease=false).
+- Workflow 41533881804 aprovado após repetição do job de inventário: build e todos os testes Windows sem Java externo passaram; portátil 5/5, instalado 5/5, reinstalado 5/5 e desinstalação preservando os bytes da base fictícia. Primeira tentativa cancelada por demora na varredura, sem publicar antecipadamente.
+- Artefatos publicados: instalador 140.180.814 bytes; portátil 128.234.065 bytes. Manifesto SHA256SUMS.txt incluído e hashes conferidos pelo workflow antes da publicação. Estes são os tamanhos definitivos do CI, distintos dos builds locais.
+- Configuração persistente dos três agentes publicada no PR #4, branch chore/codex-specialized-agents. Workflow Verificar agentes Codex 41535464841 aprovado; delegação nativa real documentada em AGENTES.md. PR permanece aberto para revisão.

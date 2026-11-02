@@ -51,3 +51,9 @@
 - Runner Windows com JDK/JRE externos removidos fisicamente: portátil 5/5, instalado 5/5, reinstalado 5/5; desinstalação preservou os bytes da base legada fictícia. Testes Java 11/11 e Node/compilação/fluxos de desenvolvimento aprovados. Nenhum dado pessoal utilizado.
 - Tag v0.3.0 criada; workflow de publicação 41533881804 repete os testes antes de disponibilizar a release. Consulte a página de Releases para o resultado definitivo e o manifesto de hashes dos artefatos publicados.
 - SmartScreen/interação manual e computador final do tio continuam fora da cobertura automatizada; assinatura digital ausente e 15 alertas moderados de desenvolvimento do empacotador permanecem documentados.
+
+## Publicação confirmada — 02/11/2026
+- Release estável v0.3.0 publicada às 22:51 UTC: https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases/tag/v0.3.0 (draft=false, prerelease=false).
+- Workflow 41533881804 aprovado após repetição do job de inventário: build e todos os testes Windows sem Java externo passaram; portátil 5/5, instalado 5/5, reinstalado 5/5 e desinstalação preservando os bytes da base fictícia. Primeira tentativa cancelada por demora na varredura, sem publicar antecipadamente.
+- Artefatos publicados: instalador 140.180.814 bytes; portátil 128.234.065 bytes. Manifesto SHA256SUMS.txt incluído e hashes conferidos pelo workflow antes da publicação. Estes são os tamanhos definitivos do CI, distintos dos builds locais.
+- Configuração persistente dos três agentes publicada no PR #4, branch chore/codex-specialized-agents. Workflow Verificar agentes Codex 41535464841 aprovado; delegação nativa real documentada em AGENTES.md. PR permanece aberto para revisão.
