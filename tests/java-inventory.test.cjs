@@ -6,7 +6,7 @@ const os = require("node:os");
 const { execFileSync } = require("node:child_process");
 
 test("Java inventory includes nested files and skips directory junctions without looping", { skip: process.platform !== "win32", timeout: 30000 }, (t) => {
-  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "aich-java-inventory-"));
+  const temporary = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "aich-java-inventory-")));
   const root = path.join(temporary, "scan");
   const outside = path.join(temporary, "outside");
   fs.mkdirSync(path.join(root, "jdk/bin"), { recursive: true });
