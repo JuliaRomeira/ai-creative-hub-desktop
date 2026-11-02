@@ -17,8 +17,9 @@ test("Aplicativo empacotado usa Java incluído e preserva dados sem Java externo
   const rendererErrors = [];
   async function launch() {
     app = await launchApp(root);
-    const runtimeRoot = await app.evaluate(() =>
-      require("node:path").join(process.resourcesPath, "runtime"),
+    const runtimeRoot = path.join(
+      await app.evaluate(() => process.resourcesPath),
+      "runtime",
     );
     expect(
       fs.existsSync(path.join(runtimeRoot, "legal/java.base/LICENSE")),
