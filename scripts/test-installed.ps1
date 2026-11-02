@@ -1,8 +1,9 @@
 param([Parameter(Mandatory = $true)][string]$Installer)
 $ErrorActionPreference = 'Stop'
 # This test changes per-user installer registration and shortcuts: only a disposable CI account is allowed.
-if ($env:CI -ne 'true') { throw 'Run installer lifecycle QA only in a disposable CI Windows account (CI=true).' }
+if ($env:CI -ne 'true' -or $env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted') { throw 'Run installer lifecycle QA only in a disposable GitHub-hosted Windows runner.' }
 $installerPath = (Resolve-Path -LiteralPath $Installer).Path
+$expectedVersion = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../package.json') -Raw | ConvertFrom-Json).version
 $uninstallRoots = @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')
 function Find-Registration {
   @($uninstallRoots | ForEach-Object { Get-ItemProperty -Path "$_\*" -ErrorAction SilentlyContinue } | Where-Object DisplayName -eq 'AI Creative Hub')
@@ -31,7 +32,7 @@ function Install-And-Test {
   if ($process.ExitCode -ne 0) { throw "Installer exited with $($process.ExitCode)." }
   if (-not (Test-Path -LiteralPath $exe)) { throw 'Installed executable missing.' }
   $registration = Find-Registration
-  if ($registration.Count -ne 1 -or $registration[0].DisplayVersion -ne '0.3.0') { throw 'Unexpected installer registration/version.' }
+  if ($registration.Count -ne 1 -or $registration[0].DisplayVersion -ne $expectedVersion) { throw 'Unexpected installer registration/version.' }
   if (-not (Test-Path -LiteralPath $desktopShortcut) -or -not (Test-Path -LiteralPath $menuShortcut)) { throw 'Installer shortcuts missing.' }
   Assert-Preserved
   $env:AICH_DIRECT_EXECUTABLE = $exe

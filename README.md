@@ -2,7 +2,7 @@
 
 **Em desenvolvimento — primeira versão funcional**
 
-Versão **0.3.0 em validação**: back-end Java 17, React/TypeScript e Electron, com instalador e portátil Windows e runtime Java reduzido com jlink.
+Versão **0.3.0**: back-end Java 17, React/TypeScript e Electron, com instalador e portátil Windows e runtime Java reduzido com jlink. A publicação estável depende das verificações obrigatórias descritas abaixo.
 
 Um espaço local para organizar clientes, campanhas, referências e decisões e preparar um contexto consistente para usar em diferentes ferramentas de IA.
 

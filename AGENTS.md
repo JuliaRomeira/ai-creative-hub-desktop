@@ -3,7 +3,7 @@
 ## Antes de trabalhar
 - Leia este arquivo, o README.md, docs/ESTADO-PROJETO.md e o código relacionado à tarefa, incluindo seus chamadores e testes.
 - A migração 0.2.0 já usa Java 17 para regras, validação, contexto e persistência. React/TypeScript apresenta a interface; Electron controla a janela e transporta JSON por stdin/stdout. Não reintroduza regras duplicadas no Node ou na interface.
-- A partir da 0.2.1, o instalador NSIS Windows x64 inclui um JRE Temurin fixado e verificado. No aplicativo empacotado, use exclusivamente o runtime incluído; não dependa de Java externo. Preserve appId/nome/userData e dados na desinstalação. Consulte docs/INSTALACAO.md.
+- A 0.3.0 distribui instalador NSIS e portátil Windows x64 com runtime Temurin 17 fixado, verificado e reduzido por jlink. No aplicativo empacotado, use exclusivamente o runtime incluído; não dependa de Java externo. Preserve appId/nome/userData e dados na desinstalação. Consulte docs/INSTALACAO.md.
 - Preserve funcionalidades, contrato JSON version 1, dados e backups existentes. O produto deve funcionar sem API paga, modelo local instalado, conta ou conexão após a instalação.
 - Não altere dados pessoais, arquivos sincronizados em sources/, dependências ou design fora da tarefa. Não publique, faça commit ou distribua sem solicitação.
 
