@@ -104,6 +104,7 @@ function App() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
   async function run(fn: () => Promise<void>) {
+    if (busy) return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -116,6 +117,7 @@ function App() {
     }
   }
   function canLeave() {
+    if (busy) return false;
     return (
       !dirty ||
       window.confirm("Descartar as alterações não salvas do contexto?")
@@ -238,7 +240,7 @@ function App() {
           <button
             aria-label="Novo cliente"
             onClick={newClient}
-            disabled={!data}
+            disabled={busy || !data}
           >
             +
           </button>
@@ -254,6 +256,7 @@ function App() {
             .filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
             .map((c) => (
               <button
+                disabled={busy}
                 className={c.id === clientId ? "selected" : ""}
                 key={c.id}
                 onClick={() => chooseClient(c.id)}
@@ -351,7 +354,7 @@ function App() {
                 <br />
                 Leve um briefing atualizado para a IA que você escolher.
               </p>
-              <button className="primary" onClick={newClient}>
+              <button className="primary" disabled={busy} onClick={newClient}>
                 + Cadastrar cliente
               </button>
               <div className="steps">
@@ -384,6 +387,7 @@ function App() {
                   </p>
                 </div>
                 <button
+                  disabled={busy}
                   onClick={() => setModal({ kind: "client", value: client })}
                 >
                   Editar cliente
@@ -397,6 +401,7 @@ function App() {
                   ...(campaign ? ["Campanha", "Contexto"] : []),
                 ].map((t) => (
                   <button
+                    disabled={busy}
                     role="tab"
                     aria-selected={tab === t}
                     className={tab === t ? "active" : ""}
@@ -417,7 +422,11 @@ function App() {
                         Um objetivo, um pedido e um histórico para cada projeto.
                       </p>
                     </div>
-                    <button className="primary" onClick={newCampaign}>
+                    <button
+                      className="primary"
+                      disabled={busy}
+                      onClick={newCampaign}
+                    >
                       + Nova campanha
                     </button>
                   </div>
@@ -426,6 +435,7 @@ function App() {
                       .filter((c) => c.clientId === clientId)
                       .map((c) => (
                         <button
+                          disabled={busy}
                           className="campaign-card"
                           key={c.id}
                           onClick={() => chooseCampaign(c)}
@@ -501,6 +511,7 @@ function App() {
                       <article className="reference" key={r.id}>
                         {r.mime.startsWith("image/") ? (
                           <button
+                            disabled={busy}
                             className="image-button"
                             onClick={() => setPreview(r.id)}
                             aria-label={`Ampliar ${r.name}`}
@@ -550,6 +561,7 @@ function App() {
                       <h2>{campaign.title}</h2>
                     </div>
                     <button
+                      disabled={busy}
                       onClick={() =>
                         setModal({
                           kind: "campaign",
@@ -583,13 +595,14 @@ function App() {
                       </p>
                     </div>
                     <button
+                      disabled={busy}
                       className="primary"
                       onClick={() => setTab("Contexto")}
                     >
                       Preparar contexto →
                     </button>
                   </div>
-                  <button onClick={() => setTab("Decisões")}>
+                  <button disabled={busy} onClick={() => setTab("Decisões")}>
                     Ver decisões e histórico
                   </button>
                 </>
@@ -606,6 +619,7 @@ function App() {
                       </p>
                     </div>
                     <button
+                      disabled={busy}
                       className="primary"
                       onClick={() => setModal({ kind: "decision" })}
                     >
@@ -641,6 +655,7 @@ function App() {
                         ) : (
                           <div className="actions">
                             <button
+                              disabled={busy}
                               onClick={() =>
                                 setModal({
                                   kind: "decision",
@@ -652,6 +667,7 @@ function App() {
                               Corrigir
                             </button>
                             <button
+                              disabled={busy}
                               onClick={() =>
                                 setModal({
                                   kind: "decision",
@@ -711,6 +727,7 @@ function App() {
                     <div>
                       <label htmlFor="context">Texto do contexto</label>
                       <textarea
+                        disabled={busy}
                         id="context"
                         className="context-text"
                         value={draft}

@@ -1,6 +1,6 @@
 {
   "name": "ai-creative-hub-desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,10 +11,11 @@
   "scripts": {
     "build": "npm run build:java && tsc --noEmit && vite build",
     "start": "npm run build && electron .",
-    "test": "npm run test:java && npm run build:java && node --test tests/backend.test.cjs",
+    "test": "npm run test:java && npm run build:java && node --test tests/backend.test.cjs tests/runtime.test.cjs",
     "test:e2e": "npm run build && playwright test",
     "check": "npm run test && npm run test:e2e",
-    "package": "npm run build && electron-builder --win portable",
+    "package": "npm run build && npm run prepare:runtime && electron-builder --win nsis portable --x64 --publish never",
+    "prepare:runtime": "node scripts/prepare-runtime.cjs",
     "build:java": "node scripts/java-build.cjs",
     "test:java": "node scripts/java-build.cjs --test"
   },
@@ -30,15 +31,44 @@
       "output": "release"
     },
     "win": {
-      "target": "portable",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "AI-Creative-Hub-Setup-${version}-${arch}.${ext}"
     },
     "extraResources": [
       {
         "from": "backend/target/creative-hub-backend.jar",
         "to": "backend/creative-hub-backend.jar"
+      },
+      {
+        "from": "backend/target/runtime",
+        "to": "runtime"
       }
-    ]
+    ],
+    "portable": {
+      "artifactName": "AI-Creative-Hub-Portable-${version}-${arch}.${ext}"
+    }
   },
   "dependencies": {
     "react": "^19.3.1",
@@ -48,7 +78,7 @@
     "@playwright/test": "^1.64.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "electron": "^45.1.0",
+    "electron": "^45.2.1",
     "electron-builder": "^26.18.0",
     "prettier": "^3.9.10",
     "typescript": "^7.0.2",
