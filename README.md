@@ -110,6 +110,8 @@ Para recuperar o estado anterior, faça uma cópia do snapshot para outra pasta,
 
 As responsabilidades dos agentes e as regras de preservação de dados estão em [AGENTS.md](AGENTS.md). Consulte também o [estado do projeto e pendências](docs/ESTADO-PROJETO.md) e o [relatório de QA](docs/QA.md) antes de continuar o desenvolvimento.
 
+Para desenvolver com o Codex, há três especialistas de projeto: implementação integrada, qualidade e distribuição Windows. O agente principal decide quando delegar; tarefas simples não precisam de vários agentes. Consulte a [configuração, validação e exemplos de uso](docs/AGENTES.md). Essa estrutura não faz parte do aplicativo instalado pelo cliente.
+
 | Camada | Responsabilidade |
 | --- | --- |
 | React + TypeScript, em `src/` | Formulários, navegação e revisão do texto retornado pelo Java |
