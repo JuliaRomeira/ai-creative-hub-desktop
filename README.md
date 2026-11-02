@@ -2,7 +2,7 @@
 
 **Em desenvolvimento — primeira versão funcional**
 
-Versão **0.2.0**: back-end Java 17, mantendo React/TypeScript e o aplicativo desktop Electron.
+Versão **0.3.0 em validação**: back-end Java 17, React/TypeScript e Electron, com instalador e portátil Windows e runtime Java reduzido com jlink.
 
 Um espaço local para organizar clientes, campanhas, referências e decisões e preparar um contexto consistente para usar em diferentes ferramentas de IA.
 
@@ -47,9 +47,15 @@ O rascunho é uma versão revisada manualmente: mudanças na marca ou nas decis�
 
 ## Baixar para Windows
 
-As distribuições ficam na [página de versões](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases). A versão **0.2.0 exige Java 17 ou superior instalado**, disponível pelo `PATH` ou por `JAVA_HOME`. O executável inclui o back-end compilado, mas não inclui o ambiente Java. Node.js e Maven não são necessários para usar o executável.
+Na [página de versões](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases), procure a versão aprovada e baixe **`AI-Creative-Hub-Setup-0.3.0-x64.exe`**. A 0.3.0 só será publicada como estável após as verificações obrigatórias. O pacote inclui interface, back-end e Java próprio: não precisa instalar Java, Node.js, Maven ou configurar variáveis de ambiente. A instalação e o uso não baixam dependências.
 
-Abra apenas o `.exe`: ele inicia a interface e o Java automaticamente. O aplicativo não é assinado digitalmente e não possui atualizador automático. A distribuição antiga **0.1.0 não usa Java**.
+Execute o instalador no **Windows 10/11 de 64 bits (x64)**. Ele instala para o usuário atual e cria atalhos na área de trabalho e no menu Iniciar. Abra o aplicativo pelo atalho. Dados e backups ficam no perfil do Windows e são preservados na atualização e na desinstalação normal.
+
+Para usar sem instalar, baixe **`AI-Creative-Hub-Portable-0.3.0-x64.exe`** e abra o arquivo. O portátil também inclui Java e salva os dados no perfil do Windows; não leva a base junto ao copiar somente o executável.
+
+Para atualizar: clique em **Exportar backup**, guarde o JSON fora do computador e feche a versão anterior. Execute o instalador novo ou substitua o portátil. Para recuperar uma base em outro computador, use **Restaurar backup**; a restauração substitui os dados atuais, mantendo uma cópia de recuperação local.
+
+O instalador ainda não é assinado digitalmente: o Windows pode mostrar um aviso de editor desconhecido ou o SmartScreen. Não há atualizador automático. A [página de versões](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases) contém apenas o que já foi publicado; gerar o instalador localmente não o publica. O portátil **0.2.0 antigo exige Java externo**; a distribuição **0.1.0 não usa Java**.
 
 ## Instalar e executar pelo código
 
@@ -66,13 +72,15 @@ npm start
 
 Se o Java não for encontrado, confira `java -version` e `javac -version` em um novo terminal. `JAVA_HOME`, quando configurado, deve apontar para a pasta do JDK, não para `bin`. Não é necessário iniciar dois terminais nem abrir o back-end manualmente.
 
-Para gerar a distribuição portátil do Windows:
+Para gerar o instalador e o portátil em uma máquina de desenvolvimento Windows x64:
 
 ```powershell
 npm run package
 ```
 
-O executável é gerado em `release/`. Não é assinado digitalmente. A distribuição portátil também guarda os dados no perfil do Windows, não ao lado do executável. Não há atualizador automático.
+Os dois executáveis são gerados em `release/`. O comando compila o projeto e baixa o Eclipse Temurin JDK 17 fixado em `scripts/prepare-runtime.cjs`, verificando SHA-256. `jdeps` identifica os módulos usados pelo JAR e `jlink` gera um runtime reduzido, sem compilador, cabeçalhos, manuais ou símbolos de depuração. O módulo `jdk.unsupported` permite a reflexão usada pelo Gson. Plataforma, arquitetura, versão, licenças e DLLs são conferidas antes do empacotamento em `resources/runtime/`. O Java pessoal do desenvolvedor não é redistribuído. O cliente não executa esse processo.
+
+O aplicativo empacotado sempre usa o Java incluído, mesmo que `JAVA_HOME` esteja inválido ou haja outra versão de Java instalada. Para atualizar o runtime distribuído, revise a publicação oficial, atualize versão, URL e SHA-256 juntos no script e repita os testes e o empacotamento. A atualização do Java incluído é feita por uma nova versão do aplicativo.
 
 ## Dados e backup
 
@@ -99,6 +107,8 @@ Antes da primeira gravação Java sobre um arquivo existente, é criada a cópia
 Para recuperar o estado anterior, faça uma cópia do snapshot para outra pasta, acrescente a extensão `.json` e use **Restaurar backup**. Restauração substitui os dados atuais, não mescla as alterações feitas depois.
 
 ## Arquitetura
+
+As responsabilidades dos agentes e as regras de preservação de dados estão em [AGENTS.md](AGENTS.md). Consulte também o [estado do projeto e pendências](docs/ESTADO-PROJETO.md) e o [relatório de QA](docs/QA.md) antes de continuar o desenvolvimento.
 
 | Camada | Responsabilidade |
 | --- | --- |
@@ -140,18 +150,7 @@ npm run package
 
 O teste end-to-end abre o Electron, preenche a interface e usa diretórios temporários com dados fictícios. As caixas nativas de seleção de arquivo e confirmação são substituídas por respostas determinísticas durante o teste; a leitura, gravação e restauração dos arquivos são reais.
 
-`npm run check` executa **9 testes JUnit, 3 testes da ponte Node/Java e 3 fluxos end-to-end**, além da compilação Java/TypeScript. Para estudar somente o Java: `npm run test:java` ou, dentro de `backend`, `.\mvnw.cmd test`.
-
-Depois de empacotar, execute os mesmos fluxos contra o **portátil real**, em PowerShell:
-
-```powershell
-$env:AICH_EXECUTABLE = (Resolve-Path 'release\AI Creative Hub 0.2.0.exe').Path
-try { npx playwright test } finally { Remove-Item Env:AICH_EXECUTABLE }
-```
-
-O teste inicia o lançador NSIS e verifica que a aplicação está empacotada e foi aberta pelo portátil. Uma ponte em `tests/portable-launch.*` repassa ao Playwright os endereços de diagnóstico que o NSIS não encaminha pela saída padrão. As portas de diagnóstico são usadas somente nesta execução de teste, em loopback; o aplicativo aberto normalmente não as habilita. Os diálogos nativos continuam simulados. O GitHub Actions executa essa validação e disponibiliza o `.exe` como artefato por 7 dias, somente após os testes passarem.
-
-Em 31/10/2026, `npm audit --omit=dev` não apontou vulnerabilidades. A auditoria completa apontou 15 alertas moderados na cadeia de desenvolvimento do `electron-builder`, derivados de `minimatch`. A sugestão automática exige regressão para uma versão antiga do empacotador; não foi aplicada. Esses alertas continuam pendentes de uma correção compatível dos fornecedores.
+`npm run check` executa JUnit, testes da ponte Node/Java e do runtime e quatro fluxos da interface, além da compilação Java/TypeScript. Após empacotar, a mesma suíte verifica o portátil real e o executável instalado, incluindo um fluxo adicional dedicado ao Java incorporado. Sem executável informado, esse fluxo adicional é ignorado explicitamente. Veja [como verificar a distribuição](docs/INSTALACAO.md) e os [resultados de QA](docs/QA.md). Para estudar somente o Java: `npm run test:java` ou, dentro de `backend`, `.\mvnw.cmd test`.
 
 Cobertura da entrega:
 
@@ -163,7 +162,6 @@ Cobertura da entrega:
 - Anexo original removido e cópia salva após reinício, com comparação byte a byte.
 - Exportação e restauração em perfil vazio, incluindo anexos e histórico.
 - Rejeição de backup malformado sem perda da base atual.
-- Base corrompida preservada, cancelamento de restauração sem gravação e recuperação por backup com snapshot dos bytes anteriores.
 - Validação de referências órfãs, identificadores duplicados, versões desconhecidas e limite por anexo.
 - Compilação TypeScript e verificação de ausência de rolagem horizontal em janela de 900 × 700.
 - Base 0.1.0 aberta sem regravação e snapshot original comparado byte a byte após editar pelo Java.
@@ -181,8 +179,8 @@ As capturas em `docs/` são geradas pelo próprio teste. Bancos, backups, depend
 - O histórico versiona orientações; edições dos campos de cliente e campanha substituem os valores anteriores.
 - PDFs não têm visualizador embutido. Use **Salvar cópia** e abra no leitor de PDF.
 - Armazenamento JSON com anexos em memória durante o uso, adequado a projetos pequenos dentro dos limites acima.
-- Distribuição Windows sem assinatura; macOS e Linux não foram validados.
-- O ambiente Java não é incluído no executável; instalação de Java 17+ é requisito real.
+- Instalador Windows x64 sem assinatura; macOS, Linux e Windows ARM64 não foram validados.
+- O Java acompanha os dois pacotes 0.3.0; execução pelo código-fonte continua exigindo JDK instalado. Consulte o relatório de QA para o alcance do teste Windows sem Java externo.
 - Bibliotecas grandes de mídia e uso prolongado com base próxima do limite ainda não foram validados. A JVM tem limite de heap de 512 MB e o armazenamento atual mantém o documento em memória.
 
 ### Roadmap — ainda não implementado
@@ -193,7 +191,6 @@ As capturas em `docs/` são geradas pelo próprio teste. Bancos, backups, depend
 - Agentes com ferramentas.
 - Integrações opcionais por API.
 - Evolução do armazenamento e do empacotamento após o uso real.
-- Distribuição com ambiente Java incluído, após definir tamanho e manutenção das atualizações.
 
 ## Referências técnicas
 
