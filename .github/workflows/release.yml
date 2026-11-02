@@ -1,0 +1,54 @@
+name: Publicar versão Windows
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    uses: ./.github/workflows/check.yml
+  publish:
+    needs: verify
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Conferir versão e integração na main
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag e package.json divergem.' }
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'A versão precisa estar integrada na main.' }
+      - uses: actions/download-artifact@v4
+        with:
+          name: ai-creative-hub-windows-tested
+          path: release
+      - name: Publicar somente os executáveis que passaram pelos testes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $assets = @(Get-ChildItem release/*.exe | Select-Object -ExpandProperty FullName)
+          if ($assets.Count -ne 2 -or -not (Test-Path release/no-system-java.txt)) { throw 'Artefatos obrigatórios ausentes.' }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $expected = @("AI-Creative-Hub-Setup-$version-x64.exe", "AI-Creative-Hub-Portable-$version-x64.exe")
+          $checksums = @(Get-Content release/SHA256SUMS.txt)
+          if ($checksums.Count -ne 2) { throw 'Manifesto de checksums inválido.' }
+          foreach ($line in $checksums) {
+            if ($line -notmatch '^([a-f0-9]{64})  (.+\.exe)$') { throw 'Formato de checksum inválido.' }
+            $digest = $Matches[1]
+            $name = $Matches[2]
+            if ($name -notin $expected) { throw "Executável inesperado: $name" }
+            if ((Get-FileHash -LiteralPath "release/$name" -Algorithm SHA256).Hash.ToLower() -ne $digest) {
+              throw "Checksum divergente: $name"
+            }
+            $expected = @($expected | Where-Object { $_ -ne $name })
+          }
+          if ($expected.Count) { throw 'Executável ausente do manifesto.' }
+          $assets += (Resolve-Path release/SHA256SUMS.txt).Path
+          gh release create $env:GITHUB_REF_NAME @assets --verify-tag --title "AI Creative Hub Desktop $env:GITHUB_REF_NAME" --generate-notes
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
