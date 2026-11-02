@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -86,9 +86,11 @@ jobs:
           if (-not $volumes.Count) { throw 'Nenhum volume fixo identificado.' }
           $volumes | Set-Content release/scanned-volumes.txt
           # Busca física, incluindo runtimes fora de PATH e JAVA_HOME. Nenhum build é executado depois.
-          $javaExecutables = @($volumes | ForEach-Object { Get-ChildItem -LiteralPath $_ -Filter java.exe -File -Recurse -Force -ErrorAction SilentlyContinue })
-          $javaExecutables.FullName | Set-Content release/external-java-before.txt
-          foreach ($java in $javaExecutables) {
+          $javaPaths = @($volumes | ForEach-Object { ./scripts/find-java.ps1 -Root $_ })
+          $javaPaths | Set-Content release/external-java-before.txt
+          foreach ($javaPath in $javaPaths) {
+            $java = Get-Item -LiteralPath $javaPath -ErrorAction SilentlyContinue
+            if (-not $java) { continue }
             if (-not (Test-Path -LiteralPath $java.FullName)) { continue }
             $root = [IO.Path]::GetFullPath((Split-Path (Split-Path $java.FullName -Parent) -Parent))
             $allowed = @($allowedRoots | Where-Object { ($root + '\').StartsWith($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
@@ -99,7 +101,10 @@ jobs:
                 -not (Select-String -LiteralPath (Join-Path $root 'release') -Pattern '^JAVA_VERSION=' -Quiet)) {
               throw "Runtime externo em caminho não reconhecido; revisar imagem: $($java.FullName)"
             }
-            if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }
+            if (Test-Path -LiteralPath $root) {
+              Write-Host "Removing external Java runtime: $root"
+              Remove-Item -LiteralPath $root -Recurse -Force
+            }
           }
           foreach ($key in @('HKLM:\SOFTWARE\JavaSoft', 'HKLM:\SOFTWARE\WOW6432Node\JavaSoft', 'HKCU:\SOFTWARE\JavaSoft')) {
             if (Test-Path -LiteralPath $key) { Remove-Item -LiteralPath $key -Recurse -Force }
@@ -113,8 +118,8 @@ jobs:
             Remove-Item -LiteralPath "Env:$($_.Name)"
             "$($_.Name)=" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           }
-          $remaining = @($volumes | ForEach-Object { Get-ChildItem -LiteralPath $_ -Filter java.exe -File -Recurse -Force -ErrorAction SilentlyContinue })
-          if ($remaining.Count) { throw "Java externo restante: $($remaining.FullName -join ', ')" }
+          $remaining = @($volumes | ForEach-Object { ./scripts/find-java.ps1 -Root $_ })
+          if ($remaining.Count) { throw "Java externo restante: $($remaining -join ', ')" }
           & "$env:SystemRoot\System32\where.exe" java 2>$null
           if ($LASTEXITCODE -eq 0) { throw 'Java ainda disponível no PATH.' }
           $global:LASTEXITCODE = 0

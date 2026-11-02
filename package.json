@@ -11,7 +11,7 @@
   "scripts": {
     "build": "npm run build:java && tsc --noEmit && vite build",
     "start": "npm run build && electron .",
-    "test": "npm run test:java && npm run build:java && node --test tests/backend.test.cjs tests/runtime.test.cjs",
+    "test": "npm run test:java && npm run build:java && node --test tests/backend.test.cjs tests/runtime.test.cjs tests/java-inventory.test.cjs",
     "test:e2e": "npm run build && playwright test",
     "check": "npm run test && npm run test:e2e",
     "package": "npm run build && npm run prepare:runtime && electron-builder --win nsis portable --x64 --publish never",
