@@ -1,4 +1,5 @@
-const { test, expect, _electron: electron } = require("@playwright/test");
+const { launchApp } = require("./launch.cjs");
+const { test, expect } = require("@playwright/test");
 const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
@@ -9,28 +10,10 @@ test("Base corrompida e cancelamento de restauracao preservam dados; backup recu
   fs.mkdirSync(workspace);
   const broken = Buffer.from("{broken");
   fs.writeFileSync(path.join(workspace, "workspace.json"), broken);
-  const env = {
-    ...process.env,
-    AICH_TEST_DATA: root,
-    AICH_TEST_NODE: process.execPath,
-  };
-  delete env.ELECTRON_RUN_AS_NODE;
-  const app = await electron.launch({
-    args: process.env.AICH_EXECUTABLE ? [] : ["."],
-    executablePath: process.env.AICH_EXECUTABLE
-      ? path.join(__dirname, "portable-launch.cmd")
-      : undefined,
-    cwd: path.resolve(__dirname, ".."),
-    env,
-  });
+  const app = await launchApp(root);
   try {
     const page = await app.firstWindow();
-    if (process.env.AICH_EXECUTABLE)
-      expect(
-        await app.evaluate(
-          ({ app }) => app.isPackaged && !!process.env.PORTABLE_EXECUTABLE_FILE,
-        ),
-      ).toBe(true);
+
     await expect(page.getByRole("alert")).toContainText(
       "Os arquivos existentes foram preservados",
     );
@@ -88,27 +71,9 @@ test("Fluxo desktop: clientes, decisões, anexos, reinício, cópia e restauraç
   let page;
   const errors = [];
   async function launch(folder) {
-    const env = {
-      ...process.env,
-      AICH_TEST_DATA: folder,
-      AICH_TEST_NODE: process.execPath,
-    };
-    delete env.ELECTRON_RUN_AS_NODE;
-    app = await electron.launch({
-      args: process.env.AICH_EXECUTABLE ? [] : ["."],
-      executablePath: process.env.AICH_EXECUTABLE
-        ? path.join(__dirname, "portable-launch.cmd")
-        : undefined,
-      cwd: path.resolve(__dirname, ".."),
-      env,
-    });
+    app = await launchApp(folder);
     page = await app.firstWindow();
-    if (process.env.AICH_EXECUTABLE)
-      expect(
-        await app.evaluate(
-          ({ app }) => app.isPackaged && !!process.env.PORTABLE_EXECUTABLE_FILE,
-        ),
-      ).toBe(true);
+
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("dialog", (d) => d.accept());
     await expect(
@@ -345,28 +310,10 @@ test("Base 0.1.0 abre sem conversão e cria snapshot ao editar pelo Java", async
     path.join(__dirname, "fixtures/legacy-v1.json"),
   );
   fs.writeFileSync(path.join(workspace, "workspace.json"), original);
-  const env = {
-    ...process.env,
-    AICH_TEST_DATA: root,
-    AICH_TEST_NODE: process.execPath,
-  };
-  delete env.ELECTRON_RUN_AS_NODE;
-  const app = await electron.launch({
-    args: process.env.AICH_EXECUTABLE ? [] : ["."],
-    executablePath: process.env.AICH_EXECUTABLE
-      ? path.join(__dirname, "portable-launch.cmd")
-      : undefined,
-    cwd: path.resolve(__dirname, ".."),
-    env,
-  });
+  const app = await launchApp(root);
   try {
     const page = await app.firstWindow();
-    if (process.env.AICH_EXECUTABLE)
-      expect(
-        await app.evaluate(
-          ({ app }) => app.isPackaged && !!process.env.PORTABLE_EXECUTABLE_FILE,
-        ),
-      ).toBe(true);
+
     page.on("dialog", (d) => d.accept());
     await page.getByRole("button", { name: /Marca Legada Fictícia/ }).click();
     await page.getByRole("button", { name: /Campanha legada/ }).click();
