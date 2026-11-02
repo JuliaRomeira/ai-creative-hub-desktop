@@ -95,7 +95,7 @@ jobs:
             $java = Get-Item -LiteralPath $javaPath -ErrorAction SilentlyContinue
             if (-not $java) { continue }
             if (-not (Test-Path -LiteralPath $java.FullName)) { continue }
-            $root = [IO.Path]::GetFullPath((Split-Path (Split-Path $java.FullName -Parent) -Parent))
+            $root = ./scripts/resolve-java-root.ps1 -JavaExecutable $java.FullName
             $allowed = @($allowedRoots | Where-Object { ($root + '\').StartsWith($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
             if (-not $allowed -or $root.Length -lt 5 -or ($root + '\').StartsWith($workspace, [StringComparison]::OrdinalIgnoreCase) -or
                 ($root + '\').StartsWith($windows, [StringComparison]::OrdinalIgnoreCase) -or

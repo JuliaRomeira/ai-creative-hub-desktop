@@ -5,6 +5,38 @@ const path = require("node:path");
 const os = require("node:os");
 const { execFileSync } = require("node:child_process");
 
+test("Java inventory resolves an embedded Java 8 JRE to its JDK and retains standalone roots", { skip: process.platform !== "win32", timeout: 30000 }, () => {
+  const temporary = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "aich-java8-root-")));
+  const jdk = path.join(temporary, "jdk8");
+  const standalone = path.join(temporary, "standalone/jre");
+  const invalidParent = path.join(temporary, "invalid");
+  const embeddedJava = path.join(jdk, "jre/bin/java.exe");
+  const outerJava = path.join(jdk, "bin/java.exe");
+  const standaloneJava = path.join(standalone, "bin/java.exe");
+  const invalidJava = path.join(invalidParent, "jre/bin/java.exe");
+  for (const file of [embeddedJava, outerJava, standaloneJava, invalidJava]) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "fictitious executable");
+  }
+  fs.writeFileSync(path.join(jdk, "release"), 'JAVA_VERSION="1.8.0_504"\n');
+  fs.writeFileSync(path.join(standalone, "release"), 'JAVA_VERSION="17.0.20.1"\n');
+  fs.writeFileSync(path.join(invalidParent, "release"), "unrelated metadata\n");
+  function resolve(executable) {
+    return execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", path.resolve(__dirname, "../scripts/resolve-java-root.ps1"), "-JavaExecutable", executable], { encoding: "utf8", windowsHide: true }).trim();
+  }
+  try {
+    assert.equal(fs.existsSync(path.join(jdk, "jre/release")), false);
+    assert.equal(resolve(embeddedJava), jdk);
+    assert.equal(resolve(outerJava), jdk);
+    assert.equal(resolve(standaloneJava), standalone);
+    assert.equal(resolve(invalidJava), path.join(invalidParent, "jre"));
+    // Resolution never removes the JDK/JRE or its executable.
+    for (const file of [embeddedJava, outerJava, standaloneJava, invalidJava]) assert.equal(fs.existsSync(file), true);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
 test("Java inventory includes nested files and skips directory junctions without looping", { skip: process.platform !== "win32", timeout: 30000 }, (t) => {
   const temporary = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "aich-java-inventory-")));
   const root = path.join(temporary, "scan");
