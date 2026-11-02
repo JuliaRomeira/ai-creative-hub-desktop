@@ -52,6 +52,16 @@ test("Java ausente produz mensagem clara sem criar dados", async () => {
   await assert.rejects(backend.request("health"), /Java 17/);
   assert.equal(fs.existsSync(folder), false);
 });
+
+test("Java incluído ausente pede reparação sem recorrer ao Java externo nem criar dados", async () => {
+  const folder = path.join(os.tmpdir(), "aich-missing-bundled-" + Date.now());
+  const backend = new JavaBackend(folder, jar, {
+    java: path.join(folder, "runtime/bin/java.exe"),
+    bundled: true,
+  });
+  await assert.rejects(backend.request("health"), /Java incluído.*Reinstale/);
+  assert.equal(fs.existsSync(folder), false);
+});
 test("Queda do Java rejeita pedidos e permite reabrir os dados", async () => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "aich-java-exit-"));
   const backend = new JavaBackend(folder, jar);

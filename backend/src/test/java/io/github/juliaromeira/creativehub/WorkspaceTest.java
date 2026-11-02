@@ -185,6 +185,65 @@ class WorkspaceTest {
   }
 
   @Test
+  void twoRealClientsKeepContextReferencesAndCampaignOwnershipIsolated() throws Exception {
+    try (var repo = legacy()) {
+      Workspace data = repo.read();
+      String otherClientId = UUID.randomUUID().toString();
+      String otherCampaignId = UUID.randomUUID().toString();
+      data.clients().add(new Client(otherClientId, "Cliente B", "Empresa exclusiva B", "", "", "", ""));
+      data.campaigns().add(new Campaign(otherCampaignId, otherClientId, "Campanha B", "", "", "", "", "Rascunho", "Rascunho B"));
+      data.decisions().add(new Decision(UUID.randomUUID().toString(), otherClientId, null, "Regra exclusiva B", "2026-10-29T00:00:00Z", null, "", null));
+      data.references().add(new Reference(UUID.randomUUID().toString(), otherClientId, "exclusivo-B.pdf", "application/pdf", "", "2026-10-29T00:00:00Z"));
+      repo.save(data);
+      var contextService = new ContextService();
+      String a = contextService.prepare(data, data.clients().get(0).id(), data.campaigns().get(0).id());
+      String b = contextService.prepare(data, otherClientId, otherCampaignId);
+      assertFalse(a.contains("exclusiva B"));
+      assertFalse(a.contains("exclusivo-B.pdf"));
+      assertTrue(b.contains("Regra exclusiva B"));
+      assertTrue(b.contains("exclusivo-B.pdf"));
+      assertFalse(b.contains("Regra permanente válida"));
+      assertFalse(b.contains("referencia.png"));
+      assertThrows(IllegalArgumentException.class, () -> contextService.prepare(data, otherClientId, data.campaigns().get(0).id()));
+      byte[] before = Files.readAllBytes(temp.resolve("workspace.json"));
+      JsonObject moved = WorkspaceRepository.JSON.toJsonTree(data.campaigns().get(0)).getAsJsonObject();
+      moved.addProperty("clientId", otherClientId);
+      assertThrows(IllegalArgumentException.class, () -> new WorkspaceService(repo).update("campaign", moved));
+      assertArrayEquals(before, Files.readAllBytes(temp.resolve("workspace.json")));
+    }
+  }
+
+  @Test
+  void blankRequiredFieldsAndBrokenLinksNeverPartiallySave() throws Exception {
+    try (var repo = legacy()) {
+      var service = new WorkspaceService(repo);
+      Workspace data = repo.read();
+      byte[] before = Files.readAllBytes(temp.resolve("workspace.json"));
+      JsonObject blankClient = WorkspaceRepository.JSON.toJsonTree(data.clients().get(0)).getAsJsonObject();
+      blankClient.addProperty("name", "   ");
+      assertThrows(IllegalArgumentException.class, () -> service.update("client", blankClient));
+      JsonObject blankCampaign = WorkspaceRepository.JSON.toJsonTree(data.campaigns().get(0)).getAsJsonObject();
+      blankCampaign.addProperty("title", "\t");
+      assertThrows(IllegalArgumentException.class, () -> service.update("campaign", blankCampaign));
+      JsonObject decision = new JsonObject();
+      decision.addProperty("clientId", data.clients().get(0).id());
+      decision.addProperty("campaignId", UUID.randomUUID().toString());
+      decision.addProperty("text", "Orientação órfã");
+      assertThrows(IllegalArgumentException.class, () -> service.update("decision", decision));
+      decision.add("campaignId", com.google.gson.JsonNull.INSTANCE);
+      decision.addProperty("text", "  ");
+      assertThrows(IllegalArgumentException.class, () -> service.update("decision", decision));
+      JsonObject correction = new JsonObject();
+      correction.addProperty("id", data.decisions().get(1).id());
+      correction.addProperty("reason", " ");
+      correction.addProperty("text", "Correção");
+      assertThrows(IllegalArgumentException.class, () -> service.update("correct", correction));
+      assertArrayEquals(before, Files.readAllBytes(temp.resolve("workspace.json")));
+      assertEquals(data, repo.read());
+    }
+  }
+
+  @Test
   void exportCannotOverwriteInternalFiles() throws Exception {
     try (var repo = legacy()) {
       byte[] original = Files.readAllBytes(temp.resolve("workspace.json"));

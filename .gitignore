@@ -11,3 +11,7 @@ coverage/
 backend/target/
 .idea/
 *.iml
+
+.java/
+.vscode/
+release-validation/

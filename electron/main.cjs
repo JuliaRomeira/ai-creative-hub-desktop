@@ -25,6 +25,17 @@ if (locked)
     backend = new JavaBackend(
       path.join(app.getPath("userData"), "workspace"),
       jar,
+      app.isPackaged
+        ? {
+            java: path.join(
+              process.resourcesPath,
+              "runtime",
+              "bin",
+              "java.exe",
+            ),
+            bundled: true,
+          }
+        : {},
     );
     try {
       await backend.request("health");

@@ -59,7 +59,9 @@ class JavaBackend {
     this.child.on("error", () =>
       this.fail(
         new Error(
-          "Não foi possível iniciar o Java. Instale Java 17 ou superior e confira JAVA_HOME ou PATH.",
+          options.bundled
+            ? "Não foi possível iniciar o Java incluído. Reinstale o AI Creative Hub para reparar a instalação. Seus dados locais serão preservados."
+            : "Não foi possível iniciar o Java. Instale Java 17 ou superior e confira JAVA_HOME ou PATH.",
         ),
       ),
     );
@@ -73,7 +75,9 @@ class JavaBackend {
     this.child.on("exit", () =>
       this.fail(
         new Error(
-          "O back-end Java foi encerrado. Confira Java 17 ou superior, feche outras instâncias e reabra o aplicativo." +
+          (options.bundled
+            ? "O Java incluído foi encerrado. Feche outras instâncias e reabra o aplicativo. Se o problema continuar, reinstale o AI Creative Hub para reparar a instalação."
+            : "O back-end Java foi encerrado. Confira Java 17 ou superior, feche outras instâncias e reabra o aplicativo.") +
             (this.diagnostic.includes("UnsupportedClassVersionError")
               ? " A versão instalada do Java é antiga."
               : ""),
