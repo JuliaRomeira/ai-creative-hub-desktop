@@ -1,5 +1,13 @@
 # Estado do projeto
 
+## Evolução Cliente → Projeto → Arte → Revisão — Etapa 1
+
+- Arquitetura, funcionalidades reutilizáveis, persistência v1 e `ContextService` mapeados em [ARQUITETURA-EVOLUCAO.md](ARQUITETURA-EVOLUCAO.md).
+- Proposto contrato JSON v2 com projetos, artes, revisões e modelos, preservando React/TypeScript → Electron → Java 17 → JSON local.
+- Planejada migração da 0.3.0 sem escrita ao apenas abrir a base, com snapshot byte a byte antes da primeira gravação v2 e conversão determinística de campanhas.
+- Riscos críticos identificados: perda de dados v1, mistura entre projetos e sobrescrita de histórico. A Etapa 2 não deve avançar sem testes de migração, reinício e falha sem gravação parcial.
+- Nesta etapa não houve alteração de código, contrato de dados, interface, base pessoal ou distribuição.
+
 ## Arquitetura observada
 - Versão 0.2.1: Java 17, Maven e Gson; React/TypeScript; Electron; instalador NSIS Windows x64 com JRE incluído.
 - Migração implementada: regras e armazenamento em backend/, transporte em electron/java-backend.cjs, interface em src/.
