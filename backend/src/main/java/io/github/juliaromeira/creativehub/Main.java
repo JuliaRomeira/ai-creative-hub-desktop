@@ -38,7 +38,8 @@ public final class Main {
                         .prepare(
                             repository.read(),
                             WorkspaceService.string(params, "clientId"),
-                            WorkspaceService.string(params, "campaignId"));
+                            WorkspaceService.string(params, "campaignId"),
+                            WorkspaceService.nullable(params, "output"));
                 case "attach" ->
                     service.addReferences(
                         WorkspaceService.string(params, "clientId"),

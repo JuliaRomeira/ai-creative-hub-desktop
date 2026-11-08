@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { Client, Campaign, Decision, Workspace } from "./types";
+import type {
+  Client,
+  Campaign,
+  Decision,
+  Workspace,
+  ContextOutput,
+} from "./types";
 import "./style.css";
 
 const clientFields = {
@@ -33,6 +39,7 @@ function App() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState("");
+  const [contextOutput, setContextOutput] = useState<ContextOutput>("art");
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<string>();
   const [search, setSearch] = useState("");
@@ -40,6 +47,9 @@ function App() {
   const campaign = data?.campaigns.find(
     (c) => c.id === campaignId && c.clientId === clientId,
   );
+  useEffect(() => {
+    setContextOutput("art");
+  }, [clientId, campaignId]);
   useEffect(() => {
     window.hub
       .read()
@@ -697,9 +707,10 @@ function App() {
                 <>
                   <div className="section-heading">
                     <div>
-                      <h2>Contexto pronto para revisar</h2>
+                      <h2>Prompt pronto para revisar</h2>
                       <p>
-                        Montado a partir dos dados salvos, sem geração por IA.
+                        Escolha o resultado. O aplicativo monta as instruções e
+                        o briefing para você copiar na outra IA.
                       </p>
                     </div>
                     <button
@@ -713,7 +724,11 @@ function App() {
                         ) {
                           run(async () => {
                             setDraft(
-                              await window.hub.context(client.id, campaign.id),
+                              await window.hub.context(
+                                client.id,
+                                campaign.id,
+                                contextOutput,
+                              ),
                             );
                             setDirty(true);
                           });
@@ -723,6 +738,28 @@ function App() {
                       Atualizar com dados atuais
                     </button>
                   </div>
+                  <label htmlFor="context-output">Resultado desejado</label>
+                  <select
+                    id="context-output"
+                    disabled={busy}
+                    value={contextOutput}
+                    onChange={(e) =>
+                      setContextOutput(e.target.value as ContextOutput)
+                    }
+                  >
+                    <option value="art">Arte final (imagem)</option>
+                    <option value="script">Roteiro de conteúdo</option>
+                    <option value="image-prompt">
+                      Prompt para ferramenta de imagem
+                    </option>
+                    <option value="context">Somente contexto</option>
+                  </select>
+                  <p className="muted">
+                    Clique em Atualizar com dados atuais para montar o prompt. A
+                    seleção só é aplicada ao atualizar; seu rascunho é
+                    preservado. A arte será criada na outra IA, se ela oferecer
+                    geração de imagens.
+                  </p>
                   <div className="context-layout">
                     <div>
                       <label htmlFor="context">Texto do contexto</label>

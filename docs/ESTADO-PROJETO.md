@@ -38,3 +38,20 @@
 - Electron atualizado de 45.1.0 para 45.2.1. Auditoria de produção: zero vulnerabilidades. Auditoria completa: 15 moderadas na cadeia minimatch/electron-builder. Não aplicado downgrade incompatível sugerido pelo npm nem override de major sem compatibilidade comprovada.
 - CI testa Java, Node, interface, runtime, portátil real e ciclo instalação/reinstalação/desinstalação. Job descartável remove instalações Java externas antes dos E2E. Release por tag repete verificações e só publica artefatos aprovados, com checksums.
 - Autorização nesta tarefa inclui commits, PR, merge e publicação, condicionados à aprovação dos testes obrigatórios. Resultados e limitações atuais em QA.md; estado remoto ainda em verificação.
+
+## Recuperação do Java — 04/11/2026 (correção local)
+- Bug reproduzido: com contexto editado e não salvo, cancelar o fechamento mantinha a janela aberta, mas `before-quit` já encerrava o Java. O encerramento agora ocorre em `will-quit`, depois de a janela aceitar fechar.
+- Se o Java encerrar inesperadamente, a próxima operação espera o processo anterior terminar e inicia uma única conexão compartilhada. O aplicativo empacotado continua usando exclusivamente o runtime incluído.
+- Uma operação interrompida não é reenviada automaticamente: a resposta informa que não foi possível confirmar o resultado e orienta conferir os dados antes de repetir. Isso evita duplicar uma gravação já concluída cuja resposta se perdeu.
+- Interface, contrato JSON v1, appId, userData, anexos e regras Java preservados. Dados reais não foram abertos ou alterados.
+- A causa exata do episódio da captura enviada pela usuária não foi comprovada. O defeito de saída cancelada foi reproduzido separadamente; não há registro persistente do encerramento original.
+- Verificações e artefatos desta correção estão registrados em QA.md.
+- Fechamento: JUnit 11/11, Node 11/11, build aprovado, desenvolvimento 7/7 aplicáveis; portátil real corrigido 8/8, com Java externo indisponível no ambiente do processo e runtime incluído confirmado após reconexão. Instalador e portátil disponíveis em `release-validation/java-recovery/`, com hashes em QA.md e SHA256SUMS.txt. Instalação/reinstalação/SmartScreen deste build não verificados; versão pessoal não substituída.
+
+## Prompt orientado ao resultado — 05/11/2026 (local)
+- A aba Contexto agora exige uma intenção explícita: arte final, roteiro de conteúdo, prompt para ferramenta de imagem ou somente contexto. Arte final é a seleção inicial.
+- O Java acrescenta a tarefa e o formato de entrega antes do briefing. Uma instrução antiga no pedido sobre o tipo de entrega é substituída somente nesse ponto; marca, conteúdo e decisões válidas permanecem obrigatórios.
+- Nenhuma IA ou API foi adicionada. O aplicativo prepara o prompt; a ferramenta escolhida pelo usuário produz a imagem ou o texto final. O contrato JSON v1 e os rascunhos existentes permanecem inalterados.
+- Na validação local: JUnit 13/13; Node 11/11; build TypeScript/Vite aprovado; Electron 8/8 aplicáveis, mais um teste do executável empacotado ignorado até gerar o novo artefato.
+- Portátil local atualizado gerado em `release-validation/prompt-output/`. A suíte real do empacotado passou 9/9 com Java externo indisponível no processo, incluindo prompt orientado, base legada, anexos, backup, reinício e recuperação do Java. SHA-256 registrado em QA.md. Instalação NSIS e computador final permanecem sem verificação desta mudança.
+- Após a revisão de compatibilidade, o artefato definitivo local está em `release-validation/prompt-final/`; o Java incluído e o novo prompt passaram no pacote exato. Esse executável não foi publicado como nova release.

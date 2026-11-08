@@ -15,10 +15,17 @@ const locked = app.requestSingleInstanceLock();
 if (!locked) app.quit();
 let win;
 let backend;
+let connecting;
 let quitting = false;
 const page = pathToFileURL(path.join(__dirname, "../dist/index.html")).href;
-if (locked)
-  app.whenReady().then(async () => {
+async function ensureBackend() {
+  if (quitting) throw new Error("O aplicativo está sendo encerrado.");
+  if (connecting) return connecting;
+  if (backend && !backend.closed) return backend;
+  connecting = (async () => {
+    // Aguarda a liberação do arquivo antes de iniciar outro escritor.
+    if (backend) await backend.close();
+    if (quitting) throw new Error("O aplicativo está sendo encerrado.");
     const jar = app.isPackaged
       ? path.join(process.resourcesPath, "backend", "creative-hub-backend.jar")
       : path.join(__dirname, "../backend/target/creative-hub-backend.jar");
@@ -37,8 +44,24 @@ if (locked)
           }
         : {},
     );
+    await backend.request("health");
+    return backend;
+  })();
+  try {
+    return await connecting;
+  } finally {
+    connecting = undefined;
+  }
+}
+async function requestBackend(method, params) {
+  const current = await ensureBackend();
+  // Uma resposta perdida nunca autoriza repetir uma gravação automaticamente.
+  return current.request(method, params);
+}
+if (locked)
+  app.whenReady().then(async () => {
     try {
-      await backend.request("health");
+      await ensureBackend();
     } catch (error) {
       dialog.showErrorBox(
         "Não foi possível iniciar o AI Creative Hub",
@@ -67,12 +90,12 @@ if (locked)
         }
       });
     }
-    handle("read", () => backend.request("read"));
+    handle("read", () => requestBackend("read"));
     handle("update", (type, input) =>
-      backend.request("update", { type, input }),
+      requestBackend("update", { type, input }),
     );
-    handle("context", (clientId, campaignId) =>
-      backend.request("context", { clientId, campaignId }),
+    handle("context", (clientId, campaignId, output) =>
+      requestBackend("context", { clientId, campaignId, output }),
     );
     handle("attach", async (clientId) => {
       const result = await dialog.showOpenDialog(win, {
@@ -87,15 +110,15 @@ if (locked)
       });
       return result.canceled
         ? null
-        : backend.request("attach", { clientId, files: result.filePaths });
+        : requestBackend("attach", { clientId, files: result.filePaths });
     });
     handle("save-reference", async (id) => {
-      const name = await backend.request("reference-name", { id });
+      const name = await requestBackend("reference-name", { id });
       const result = await dialog.showSaveDialog(win, {
         defaultPath: path.basename(name),
       });
       if (result.canceled) return false;
-      return backend.request("save-reference", { id, path: result.filePath });
+      return requestBackend("save-reference", { id, path: result.filePath });
     });
     handle("copy", (value) => {
       if (typeof value !== "string" || value.length > 200000)
@@ -109,7 +132,7 @@ if (locked)
         filters: [{ name: "Backup JSON", extensions: ["json"] }],
       });
       if (result.canceled) return false;
-      return backend.request("export", { path: result.filePath });
+      return requestBackend("export", { path: result.filePath });
     });
     handle("import", async () => {
       const result = await dialog.showOpenDialog(win, {
@@ -117,7 +140,7 @@ if (locked)
         filters: [{ name: "Backup JSON", extensions: ["json"] }],
       });
       if (result.canceled) return null;
-      await backend.request("validate-backup", { path: result.filePaths[0] });
+      await requestBackend("validate-backup", { path: result.filePaths[0] });
       const confirm = await dialog.showMessageBox(win, {
         type: "warning",
         message: "Restaurar este backup?",
@@ -128,7 +151,7 @@ if (locked)
         cancelId: 0,
       });
       return confirm.response === 1
-        ? backend.request("import", { path: result.filePaths[0] })
+        ? requestBackend("import", { path: result.filePaths[0] })
         : null;
     });
     win = new BrowserWindow({
@@ -156,7 +179,7 @@ app.on("second-instance", () => {
   }
 });
 app.on("window-all-closed", () => app.quit());
-app.on("before-quit", (event) => {
+app.on("will-quit", (event) => {
   if (quitting || !backend) return;
   event.preventDefault();
   quitting = true;

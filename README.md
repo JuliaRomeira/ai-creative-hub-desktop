@@ -10,7 +10,7 @@ Um espaço local para organizar clientes, campanhas, referências e decisões e 
 
 Na criação de artes, repetir o briefing em várias ferramentas pode fazer informações importantes se perderem. O AI Creative Hub mantém os dados da marca e o histórico das orientações juntos, por cliente e campanha. A utilidade desta primeira versão ainda será validada no fluxo real de trabalho.
 
-O aplicativo funciona sem API, modelo local, conta ou conexão depois de instalado. Não gera textos ou imagens por inteligência artificial: organiza informações fornecidas pelo usuário com regras explícitas.
+O aplicativo funciona sem API, modelo local, conta ou conexão depois de instalado. Ele monta, com regras explícitas, um prompt completo para pedir arte final, roteiro ou um prompt de imagem em outra IA. A imagem ou o texto final são gerados pela ferramenta escolhida pelo usuário.
 
 ## Interface real
 
@@ -27,7 +27,7 @@ Capturas do aplicativo Electron durante o teste automatizado. **Ateliê Aurora �
 - Campanhas com título, objetivo, público, formato, pedido e status.
 - Orientações permanentes do cliente e decisões específicas de campanha.
 - Correção e invalidação com motivo e data, mantendo o registro anterior no histórico.
-- Contexto determinístico usando a marca, a campanha escolhida e somente decisões válidas. Rascunho editável, salvável e copiável.
+- Prompt determinístico usando a marca, a campanha escolhida e somente decisões válidas. O usuário escolhe entre arte final, roteiro, prompt para ferramenta de imagem ou somente contexto. O resultado é editável, salvável e copiável.
 - Relação das referências que devem ser anexadas manualmente. **Copiar o texto não envia arquivos para outra IA.**
 - Persistência local entre sessões e backup completo, incluindo os bytes dos anexos.
 - Importação validada, com confirmação da substituição e cópia local dos dados anteriores.
@@ -39,7 +39,7 @@ Capturas do aplicativo Electron durante o teste automatizado. **Ateliê Aurora �
 2. Em **Referências**, adicione logos e exemplos aprovados.
 3. Crie uma campanha com o pedido atual.
 4. Em **Decisões**, registre regras permanentes ou orientações exclusivas da campanha aberta.
-5. Abra **Contexto → Atualizar com dados atuais**. Revise o texto, edite se necessário, salve o rascunho e copie.
+5. Abra **Contexto**, escolha o resultado desejado e clique em **Atualizar com dados atuais**. O aplicativo acrescenta a tarefa para a IA ao briefing. Revise, edite se necessário, salve o rascunho e copie.
 6. Na ferramenta escolhida, cole o texto e anexe as referências separadamente.
 7. Registre as próximas decisões. Use **Corrigir** ou **Invalidar** quando uma orientação deixar de valer e atualize o contexto novamente.
 
