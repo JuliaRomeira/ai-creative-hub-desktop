@@ -124,11 +124,11 @@ test("Fluxo desktop: clientes, decisões, anexos, reinício, cópia e restauraç
     ).toBeVisible();
     fs.unlinkSync(original);
     await page.getByRole("tab", { name: "Visão geral" }).click();
-    await page.getByRole("button", { name: "Nova campanha" }).click();
+    await page.getByRole("button", { name: "Novo projeto" }).click();
     for (const [label, value] of Object.entries({
-      "Título da campanha": "Coleção Terra · lançamento",
+      "Nome do projeto": "Coleção Terra · lançamento",
       Objetivo: "Apresentar a nova coleção e convidar para conhecer o ateliê.",
-      "Público da campanha": "Pessoas interessadas em decoração afetiva",
+      "Público do projeto": "Pessoas interessadas em decoração afetiva",
       Formato: "Carrossel de Instagram · 5 páginas",
       "Pedido atual":
         "Criar uma proposta de narrativa visual com foco nas texturas das peças.",
@@ -138,7 +138,7 @@ test("Fluxo desktop: clientes, decisões, anexos, reinício, cópia e restauraç
       .getByLabel("Status", { exact: true })
       .selectOption("Em andamento");
     await save();
-    await page.getByRole("button", { name: "Editar campanha" }).click();
+    await page.getByRole("button", { name: "Editar projeto" }).click();
     await page
       .getByLabel("Objetivo", { exact: true })
       .fill("Apresentar a coleção Terra e convidar para visitar o ateliê.");
@@ -161,9 +161,9 @@ test("Fluxo desktop: clientes, decisões, anexos, reinício, cópia e restauraç
     await save();
     await addDecision(
       "Mostrar detalhes de textura na segunda página.",
-      "campaign",
+      "project",
     );
-    await addDecision("Incluir preço na capa.", "campaign");
+    await addDecision("Incluir preço na capa.", "project");
     await page
       .locator(".decision")
       .filter({ hasText: "Incluir preço na capa." })
@@ -269,9 +269,9 @@ test("Fluxo desktop: clientes, decisões, anexos, reinício, cópia e restauraç
       ),
     ).toBe(true);
     await page.getByRole("tab", { name: "Visão geral" }).click();
-    await page.getByRole("button", { name: "Nova campanha" }).click();
+    await page.getByRole("button", { name: "Novo projeto" }).click();
     await page
-      .getByLabel("Título da campanha", { exact: true })
+      .getByLabel("Nome do projeto", { exact: true })
       .fill("Outra campanha fictícia");
     await save();
     await page.getByRole("tab", { name: "Contexto", exact: true }).click();

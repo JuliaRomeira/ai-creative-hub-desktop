@@ -86,10 +86,16 @@ test("Resposta de contexto pendente não permite misturar clientes ou perder edi
     const persisted = JSON.parse(
       fs.readFileSync(path.join(directory, "workspace.json"), "utf8"),
     );
-    expect(persisted.campaigns.find((c) => c.clientId === otherId).draft).toBe(
+    const contextFor = (project) => {
+      const art = persisted.arts.find((item) => item.projectId === project.id);
+      return persisted.revisions
+        .filter((item) => item.artId === art.id)
+        .sort((a, b) => b.sequence - a.sequence)[0].generatedContext;
+    };
+    expect(contextFor(persisted.projects.find((p) => p.clientId === otherId))).toBe(
       "Rascunho exclusivo B",
     );
-    expect(persisted.campaigns.find((c) => c.clientId !== otherId).draft).toBe(
+    expect(contextFor(persisted.projects.find((p) => p.clientId !== otherId))).toBe(
       "CONTEXTO EXCLUSIVO A",
     );
   } finally {

@@ -1,5 +1,14 @@
 # Estado do projeto
 
+## Evolução Cliente → Projeto → Arte → Revisão — Etapa 2
+
+- Implementado contrato JSON v2 com projetos, artes, modelos, revisões, decisões por projeto e referências com escopo validado.
+- Bases v1 da 0.3.0 são migradas em memória sem escrita ao abrir; a primeira mutação preserva os bytes em `workspace.json.before-v2` e mantém o snapshot legado.
+- Projetos e artes podem ser criados e editados; modelos podem ser criados, editados, duplicados e reutilizados por snapshot; revisões são acrescentadas, podem partir de versão antiga e podem ser aprovadas sem sobrescrever o histórico.
+- A interface real foi integrada ao v2 na aba **Modelos e artes**. O fluxo automatizado cria projeto, modelo, segunda arte e duas revisões, aprova uma versão, reinicia o Electron e recupera tudo.
+- Corrigida a restauração de backup válido sobre base corrompida: o arquivo inválido é preservado e não bloqueia a substituição validada.
+- Exclusão e cascata não foram implementadas porque não fazem parte dos critérios e aumentariam o risco de perda de dados.
+
 ## Evolução Cliente → Projeto → Arte → Revisão — Etapa 1
 
 - Arquitetura, funcionalidades reutilizáveis, persistência v1 e `ContextService` mapeados em [ARQUITETURA-EVOLUCAO.md](ARQUITETURA-EVOLUCAO.md).

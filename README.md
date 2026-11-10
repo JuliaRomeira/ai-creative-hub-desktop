@@ -4,7 +4,7 @@
 
 Versão **0.3.0**: back-end Java 17, React/TypeScript e Electron, com instalador e portátil Windows e runtime Java reduzido com jlink. A publicação estável depende das verificações obrigatórias descritas abaixo.
 
-Um espaço local para organizar clientes, campanhas, referências e decisões e preparar um contexto consistente para usar em diferentes ferramentas de IA.
+Um espaço local para organizar clientes, projetos, artes, revisões, referências e decisões e preparar um contexto consistente para usar em diferentes ferramentas de IA.
 
 ## Por que existe
 
@@ -24,8 +24,10 @@ Capturas do aplicativo Electron durante o teste automatizado. **Ateliê Aurora �
 
 - Cadastro e edição de clientes: empresa, público, tom, cores e orientações da marca; busca por nome.
 - Referências por cliente: PNG, JPG, WEBP e PDF. Imagens têm prévia ampliada; qualquer referência pode ser salva como cópia. PDFs são consultados no visualizador externo depois de salvar a cópia.
-- Campanhas com título, objetivo, público, formato, pedido e status.
-- Orientações permanentes do cliente e decisões específicas de campanha.
+- Vários projetos por cliente e várias artes por projeto.
+- Modelos de arte editáveis, duplicáveis e reutilizáveis sem alterar artes existentes.
+- Revisões acrescentadas ao histórico, com origem opcional em versão anterior e aprovação sem sobrescrever outras versões.
+- Orientações permanentes do cliente e decisões específicas de projeto.
 - Correção e invalidação com motivo e data, mantendo o registro anterior no histórico.
 - Prompt determinístico usando a marca, a campanha escolhida e somente decisões válidas. O usuário escolhe entre arte final, roteiro, prompt para ferramenta de imagem ou somente contexto. O resultado é editável, salvável e copiável.
 - Relação das referências que devem ser anexadas manualmente. **Copiar o texto não envia arquivos para outra IA.**
@@ -92,7 +94,7 @@ O Java salva `workspace/workspace.json` no diretório informado pelo Electron, m
 
 Os anexos são copiados para a base em Base64; o arquivo original pode ser movido ou removido. A gravação usa arquivo temporário, sincronização em disco e substituição atômica com Java NIO. Se o sistema de arquivos não permitir substituição atômica, a operação falha em vez de usar uma gravação menos segura. Uma cópia `workspace.json.previous` guarda o estado anterior à última gravação. O Electron limita as instâncias, e o Java também mantém um bloqueio de arquivo para evitar dois escritores na mesma base.
 
-**Exportar backup** salva um JSON com clientes, campanhas, decisões, rascunhos e anexos. Guarde uma cópia fora do computador. **Restaurar backup** valida a versão e as relações antes de substituir a base; não mescla dados. Uma cópia `workspace.json.before-restore-*` preserva o estado anterior à restauração, além da cópia da última gravação.
+**Exportar backup** salva um JSON com clientes, projetos, artes, modelos, revisões, decisões e anexos. Guarde uma cópia fora do computador. **Restaurar backup** aceita dados v1 da 0.3.0 e dados v2, valida a versão e as relações antes de substituir a base e não mescla dados. Uma cópia `workspace.json.before-restore-*` preserva o estado anterior à restauração, além da cópia da última gravação.
 
 Se a base não puder ser lida, o aplicativo exibe o erro sem reinicializá-la. É possível restaurar um backup pelo menu lateral. Para recuperar uma cópia automática, selecione uma cópia dela com extensão `.json` no importador. A base e os backups **não são criptografados**; proteja esses arquivos como qualquer documento de cliente.
 
@@ -100,7 +102,9 @@ Limites explícitos da primeira versão: **10 MB por referência e 100 MB para a
 
 ### Compatibilidade com a versão anterior
 
-Não há conversão de banco: o contrato JSON continua com `version: 1`. Clientes, campanhas, decisões, datas, rascunhos e anexos existentes são lidos pelo Java. Apenas abrir a base não a regrava.
+O contrato atual usa `version: 2`. Bases `version: 1` da 0.3.0 são validadas e convertidas em memória: campanhas tornam-se projetos, cada campanha ganha uma arte inicial e rascunhos existentes tornam-se a primeira revisão. Apenas abrir a base não a regrava.
+
+Antes da primeira gravação v2 sobre uma base v1, o aplicativo preserva os bytes originais em `workspace.json.before-v2`. IDs criados pela migração são determinísticos, decisões e anexos mantêm seus IDs e referências antigas continuam no escopo do cliente. O status aprovado de uma campanha é preservado no projeto, mas não inventa aprovação de revisão.
 
 Antes da primeira gravação Java sobre um arquivo existente, é criada a cópia **`workspace.json.before-java-v020`**, preservando os bytes originais. Ela não é sobrescrita por edições seguintes. A base fictícia gerada pela implementação 0.1.0 foi usada nos testes de compatibilidade; nenhum banco pessoal foi usado nos testes. Exporte um backup antes de atualizar, feche a versão anterior e não execute versões diferentes simultaneamente sobre a mesma base.
 

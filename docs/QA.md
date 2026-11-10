@@ -1,5 +1,13 @@
 # Relatório de QA — 29/10/2026
 
+## Etapa 2 — estrutura e persistência v2 — 10/11/2026
+
+- JUnit: 17/17 aprovados. Quatro testes específicos cobrem migração v1 sem escrita na leitura, snapshot byte a byte, IDs determinísticos, múltiplos projetos/artes, snapshot de modelo, duplicação, revisões derivadas, aprovação, relações inválidas, falha sem gravação parcial e backup/restauração v1/v2.
+- Node/ponte Java: 12/12 aprovados, incluindo criação de projeto, modelo, arte e duas revisões, encerramento do Java, reabertura e recuperação do JSON v2.
+- Electron/Playwright: fluxo v2 cria dados pela interface real, reinicia e confirma projeto, modelo, duas artes, duas revisões e aprovação. A regressão existente também valida base legada, isolamento, recuperação do Java, anexos e contexto.
+- Dados exclusivamente fictícios em diretórios temporários. Nenhuma base pessoal, instalação ou executável publicado foi alterado.
+- A validação de uso cotidiano por designer permanece pendente; empacotamento, instalador e SmartScreen pertencem à etapa final.
+
 ## Método e isolamento
 - Agentes separados: QA escreve testes, desenvolvedor altera aplicação, coordenador mantém documentação.
 - Dados fictícios em diretórios temporários; nenhuma base pessoal usada.

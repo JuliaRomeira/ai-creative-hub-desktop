@@ -73,7 +73,11 @@ test("Cancelar saída com rascunho mantém Java e permite salvar sem reabrir", a
     const saved = JSON.parse(
       fs.readFileSync(path.join(f.root, "workspace/workspace.json"), "utf8"),
     );
-    expect(saved.campaigns[0].draft).toBe(
+    const art = saved.arts.find((item) => item.projectId === saved.projects[0].id);
+    const latest = saved.revisions
+      .filter((item) => item.artId === art.id)
+      .sort((a, b) => b.sequence - a.sequence)[0];
+    expect(latest.generatedContext).toBe(
       "Rascunho preservado após cancelar saída.",
     );
   } finally {

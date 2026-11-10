@@ -6,6 +6,9 @@ import type {
   Decision,
   Workspace,
   ContextOutput,
+  Art,
+  ArtTemplate,
+  Revision,
 } from "./types";
 import "./style.css";
 
@@ -18,13 +21,26 @@ const clientFields = {
   guidelines: "Orientações da marca",
 };
 const campaignFields = {
-  title: "Título da campanha",
+  title: "Nome do projeto",
   objective: "Objetivo",
-  audience: "Público da campanha",
+  audience: "Público do projeto",
   format: "Formato",
   request: "Pedido atual",
 };
 const date = (value: string) => new Date(value).toLocaleString("pt-BR");
+const campaignsFrom = (data?: Workspace): Campaign[] =>
+  data?.projects.map((project) => {
+    const art = data.arts.find((item) => item.projectId === project.id);
+    const revision = data.revisions
+      .filter((item) => item.artId === art?.id)
+      .sort((a, b) => b.sequence - a.sequence)[0];
+    return {
+      ...project,
+      format: art?.format || "",
+      request: art?.briefing || "",
+      draft: revision?.generatedContext || "",
+    };
+  }) || [];
 type Modal =
   | { kind: "client"; value: Client }
   | { kind: "campaign"; value: Campaign }
@@ -43,8 +59,9 @@ function App() {
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<string>();
   const [search, setSearch] = useState("");
+  const campaigns = campaignsFrom(data);
   const client = data?.clients.find((c) => c.id === clientId);
-  const campaign = data?.campaigns.find(
+  const campaign = campaigns.find(
     (c) => c.id === campaignId && c.clientId === clientId,
   );
   useEffect(() => {
@@ -126,6 +143,12 @@ function App() {
       setBusy(false);
     }
   }
+  async function updateStructure(type: string, input: unknown) {
+    await run(async () => {
+      setData(await window.hub.update(type, input));
+      setNotice("Salvo no computador.");
+    });
+  }
   function canLeave() {
     if (busy) return false;
     return (
@@ -146,7 +169,7 @@ function App() {
     setCampaignId(c.id);
     setDraft(c.draft);
     setDirty(false);
-    setTab("Campanha");
+    setTab("Projeto");
   }
   function newClient() {
     if (!canLeave()) return;
@@ -194,7 +217,7 @@ function App() {
         next = await window.hub.update(modal.action || "decision", {
           id: modal.value?.id,
           clientId,
-          campaignId: form.get("scope") === "campaign" ? campaignId : null,
+          projectId: form.get("scope") === "project" ? campaignId : null,
           text: String(form.get("text") || "").trim(),
           reason: String(form.get("reason") || "").trim(),
         });
@@ -218,7 +241,7 @@ function App() {
           setCampaignId(input.id);
           setDraft((input as Campaign).draft);
           setDirty(false);
-          setTab("Campanha");
+          setTab("Projeto");
         }
       }
       setData(next);
@@ -230,7 +253,7 @@ function App() {
     data?.decisions.filter(
       (d) =>
         d.clientId === clientId &&
-        (!d.campaignId || d.campaignId === campaignId),
+        (!d.projectId || d.projectId === campaignId),
     ) || [];
   const refs = data?.references.filter((r) => r.clientId === clientId) || [];
   return (
@@ -375,7 +398,7 @@ function App() {
                 </div>
                 <div>
                   <b>02</b>
-                  <h3>Organize a campanha</h3>
+                  <h3>Organize o projeto</h3>
                   <p>Pedidos e decisões com histórico.</p>
                 </div>
                 <div>
@@ -408,7 +431,8 @@ function App() {
                   "Visão geral",
                   "Referências",
                   "Decisões",
-                  ...(campaign ? ["Campanha", "Contexto"] : []),
+                  "Modelos e artes",
+                  ...(campaign ? ["Projeto", "Contexto"] : []),
                 ].map((t) => (
                   <button
                     disabled={busy}
@@ -427,7 +451,7 @@ function App() {
                 <>
                   <div className="section-heading">
                     <div>
-                      <h2>Campanhas</h2>
+                      <h2>Projetos</h2>
                       <p>
                         Um objetivo, um pedido e um histórico para cada projeto.
                       </p>
@@ -437,11 +461,11 @@ function App() {
                       disabled={busy}
                       onClick={newCampaign}
                     >
-                      + Nova campanha
+                      + Novo projeto
                     </button>
                   </div>
                   <div className="campaign-grid">
-                    {data.campaigns
+                    {campaigns
                       .filter((c) => c.clientId === clientId)
                       .map((c) => (
                         <button
@@ -453,20 +477,20 @@ function App() {
                           <span className="status">{c.status}</span>
                           <h3>{c.title}</h3>
                           <p>
-                            {c.objective || "Defina o objetivo desta campanha."}
+                            {c.objective || "Defina o objetivo deste projeto."}
                           </p>
                           <footer>
                             {c.format || "Formato não definido"}{" "}
-                            <span>Abrir campanha →</span>
+                            <span>Abrir projeto →</span>
                           </footer>
                         </button>
                       ))}
                   </div>
-                  {!data.campaigns.some((c) => c.clientId === clientId) && (
+                  {!campaigns.some((c) => c.clientId === clientId) && (
                     <div className="empty">
                       <h3>Qual é o próximo projeto?</h3>
                       <p>
-                        Crie a primeira campanha para organizar o pedido deste
+                        Crie o primeiro projeto para organizar o pedido deste
                         cliente.
                       </p>
                     </div>
@@ -563,7 +587,15 @@ function App() {
                   )}
                 </>
               )}
-              {tab === "Campanha" && campaign && (
+              {tab === "Modelos e artes" && (
+                <StructurePanel
+                  data={data}
+                  projectId={campaignId}
+                  busy={busy}
+                  update={updateStructure}
+                />
+              )}
+              {tab === "Projeto" && campaign && (
                 <>
                   <div className="section-heading">
                     <div>
@@ -579,7 +611,7 @@ function App() {
                         })
                       }
                     >
-                      Editar campanha
+                      Editar projeto
                     </button>
                   </div>
                   <section className="panel">
@@ -625,7 +657,7 @@ function App() {
                       <p>
                         {campaign
                           ? `Regras da marca e decisões de “${campaign.title}”.`
-                          : "Regras permanentes da marca. Abra uma campanha para ver suas decisões."}
+                          : "Regras permanentes da marca. Abra um projeto para ver suas decisões."}
                       </p>
                     </div>
                     <button
@@ -646,7 +678,7 @@ function App() {
                       >
                         <div className="decision-meta">
                           <span className="status">
-                            {d.campaignId ? "Campanha" : "Permanente"}
+                            {d.projectId ? "Projeto" : "Permanente"}
                           </span>
                           <span>
                             {d.invalidatedAt ? "Invalidada" : "Válida"} ·{" "}
@@ -784,10 +816,18 @@ function App() {
                           disabled={busy || !dirty}
                           onClick={() =>
                             run(async () => {
+                              const art = data.arts.find(
+                                (item) => item.projectId === campaign.id,
+                              );
+                              if (!art) throw new Error("Arte não encontrada.");
                               setData(
-                                await window.hub.update("campaign", {
-                                  ...campaign,
-                                  draft,
+                                await window.hub.update("revision", {
+                                  artId: art.id,
+                                  sourceRevisionId: null,
+                                  instructions: "Contexto revisado manualmente.",
+                                  preserveElements: [],
+                                  modifyElements: [],
+                                  generatedContext: draft,
                                 }),
                               );
                               setDirty(false);
@@ -854,7 +894,7 @@ function App() {
               modal.kind === "client"
                 ? "Cadastro de cliente"
                 : modal.kind === "campaign"
-                  ? "Cadastro de campanha"
+                  ? "Cadastro de projeto"
                   : "Orientação"
             }
             className="modal"
@@ -864,7 +904,7 @@ function App() {
                 {modal.kind === "client"
                   ? "Informações do cliente"
                   : modal.kind === "campaign"
-                    ? "Informações da campanha"
+                    ? "Informações do projeto"
                     : modal.action === "correct"
                       ? "Corrigir orientação"
                       : modal.action === "invalidate"
@@ -933,8 +973,8 @@ function App() {
                             Regra permanente do cliente
                           </option>
                           {campaign && (
-                            <option value="campaign">
-                              Somente esta campanha
+                            <option value="project">
+                              Somente este projeto
                             </option>
                           )}
                         </select>
@@ -1012,6 +1052,275 @@ function App() {
     </div>
   );
 }
+
+function StructurePanel({
+  data,
+  projectId,
+  busy,
+  update,
+}: {
+  data: Workspace;
+  projectId: string;
+  busy: boolean;
+  update: (type: string, input: unknown) => Promise<void>;
+}) {
+  const arts = data.arts.filter((art) => art.projectId === projectId);
+  const [artId, setArtId] = useState(arts[0]?.id || "");
+  const selectedArt = arts.find((art) => art.id === artId) || arts[0];
+  const revisions = data.revisions
+    .filter((revision) => revision.artId === selectedArt?.id)
+    .sort((a, b) => a.sequence - b.sequence);
+
+  useEffect(() => {
+    if (!arts.some((art) => art.id === artId)) setArtId(arts[0]?.id || "");
+  }, [projectId, data.arts, artId, arts]);
+
+  const values = (form: HTMLFormElement) =>
+    Object.fromEntries(
+      [...new FormData(form).entries()].map(([key, value]) => [
+        key,
+        String(value).trim(),
+      ]),
+    );
+  const list = (value: string) =>
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  return (
+    <>
+      <div className="section-heading">
+        <div>
+          <h2>Modelos de arte</h2>
+          <p>Reutilize a estrutura sem alterar artes que já foram criadas.</p>
+        </div>
+      </div>
+      <form
+        className="panel"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          await update("template", {
+            id: crypto.randomUUID(),
+            ...values(event.currentTarget),
+          });
+          event.currentTarget.reset();
+        }}
+      >
+        <div className="form-grid">
+          <label>
+            Nome do modelo
+            <input name="name" required maxLength={20000} />
+          </label>
+          <label>
+            Formato
+            <input name="format" maxLength={20000} />
+          </label>
+          <label className="full">
+            Instruções do modelo
+            <textarea name="instructions" maxLength={20000} rows={2} />
+          </label>
+        </div>
+        <button className="primary" disabled={busy}>Criar modelo</button>
+      </form>
+      <div className="campaign-grid">
+        {data.templates.map((template) => (
+          <form
+            className="campaign-card"
+            key={template.id}
+            onSubmit={(event) => {
+              event.preventDefault();
+              return update("template", {
+                id: template.id,
+                ...values(event.currentTarget),
+              });
+            }}
+          >
+            <label>
+              Nome
+              <input name="name" defaultValue={template.name} required />
+            </label>
+            <label>
+              Formato
+              <input name="format" defaultValue={template.format} />
+            </label>
+            <label>
+              Instruções
+              <textarea name="instructions" defaultValue={template.instructions} rows={2} />
+            </label>
+            <div className="actions">
+              <button disabled={busy} type="submit">Salvar modelo</button>
+              <button
+                disabled={busy}
+                type="button"
+                onClick={() =>
+                  update("duplicate-template", {
+                    id: template.id,
+                    name: `${template.name} - cópia`,
+                  })
+                }
+              >
+                Duplicar
+              </button>
+            </div>
+          </form>
+        ))}
+      </div>
+
+      <div className="section-heading">
+        <div>
+          <h2>Artes do projeto</h2>
+          <p>Escolha um projeto na visão geral para organizar suas artes.</p>
+        </div>
+      </div>
+      {!projectId ? (
+        <div className="empty"><p>Abra um projeto para criar artes e revisões.</p></div>
+      ) : (
+        <>
+          <form
+            className="panel"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const input = values(event.currentTarget);
+              const id = crypto.randomUUID();
+              await update("art", {
+                id,
+                projectId,
+                title: input.title,
+                format: input.format,
+                briefing: input.briefing,
+                templateId: input.templateId || null,
+                templateName: "",
+                templateInstructions: "",
+              });
+              setArtId(id);
+              event.currentTarget.reset();
+            }}
+          >
+            <div className="form-grid">
+              <label>
+                Título da arte
+                <input name="title" required maxLength={20000} />
+              </label>
+              <label>
+                Modelo
+                <select name="templateId" defaultValue="">
+                  <option value="">Em branco</option>
+                  {data.templates.map((template) => (
+                    <option key={template.id} value={template.id}>{template.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Formato
+                <input name="format" maxLength={20000} />
+              </label>
+              <label className="full">
+                Briefing
+                <textarea name="briefing" maxLength={20000} rows={3} />
+              </label>
+            </div>
+            <button className="primary" disabled={busy}>Criar arte</button>
+          </form>
+          <div className="campaign-grid">
+            {arts.map((art) => (
+              <button
+                className={`campaign-card ${art.id === selectedArt?.id ? "selected" : ""}`}
+                disabled={busy}
+                key={art.id}
+                onClick={() => setArtId(art.id)}
+              >
+                <h3>{art.title}</h3>
+                <p>{art.format || "Formato não definido"}</p>
+                <footer>{art.templateName || "Arte em branco"}</footer>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {selectedArt && (
+        <>
+          <div className="section-heading">
+            <div>
+              <h2>Revisões de {selectedArt.title}</h2>
+              <p>O histórico é acrescentado; versões anteriores não são sobrescritas.</p>
+            </div>
+          </div>
+          <form
+            className="panel"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const input = values(event.currentTarget);
+              await update(input.sourceRevisionId ? "revision-from" : "revision", {
+                artId: selectedArt.id,
+                sourceRevisionId: input.sourceRevisionId || null,
+                instructions: input.instructions,
+                preserveElements: list(input.preserveElements),
+                modifyElements: list(input.modifyElements),
+                generatedContext: input.generatedContext,
+              });
+              event.currentTarget.reset();
+            }}
+          >
+            <div className="form-grid">
+              <label>
+                Partir de uma revisão
+                <select name="sourceRevisionId" defaultValue="">
+                  <option value="">Nova revisão</option>
+                  {revisions.map((revision) => (
+                    <option key={revision.id} value={revision.id}>Revisão {revision.sequence}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Elementos a preservar
+                <input name="preserveElements" placeholder="logotipo, cores" />
+              </label>
+              <label>
+                Elementos a modificar
+                <input name="modifyElements" placeholder="imagem principal" />
+              </label>
+              <label className="full">
+                Instruções da revisão
+                <textarea name="instructions" maxLength={20000} rows={3} />
+              </label>
+              <label className="full">
+                Contexto registrado
+                <textarea name="generatedContext" maxLength={200000} rows={4} />
+              </label>
+            </div>
+            <button className="primary" disabled={busy}>Criar revisão</button>
+          </form>
+          <div className="decision-list">
+            {revisions.map((revision) => (
+              <article className="decision" key={revision.id}>
+                <h3>Revisão {revision.sequence}</h3>
+                <p>{revision.instructions || "Sem instruções adicionais."}</p>
+                <small>
+                  {revision.approvedAt
+                    ? `Aprovada em ${date(revision.approvedAt)}`
+                    : revision.createdAt
+                      ? date(revision.createdAt)
+                      : "Migrada da versão 0.3.0"}
+                </small>
+                {!revision.approvedAt && (
+                  <button
+                    disabled={busy}
+                    onClick={() => update("approve-revision", { id: revision.id })}
+                  >
+                    Aprovar revisão
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
