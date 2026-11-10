@@ -26,15 +26,156 @@ public final class WorkspaceService {
         data.clients().removeIf(c -> Objects.equals(c.id(), client.id()));
         data.clients().add(client);
       }
+      case "project" -> {
+        Project project = WorkspaceRepository.JSON.fromJson(input, Project.class);
+        data.projects().stream()
+            .filter(old -> Objects.equals(old.id(), project.id()))
+            .forEach(
+                old ->
+                    require(
+                        Objects.equals(old.clientId(), project.clientId()),
+                        "Não é possível trocar o cliente do projeto."));
+        data.projects().removeIf(old -> Objects.equals(old.id(), project.id()));
+        data.projects().add(project);
+      }
+      case "art" -> {
+        Art submitted = WorkspaceRepository.JSON.fromJson(input, Art.class);
+        Art old =
+            data.arts().stream()
+                .filter(a -> Objects.equals(a.id(), submitted.id()))
+                .findFirst()
+                .orElse(null);
+        if (old != null)
+          require(
+              Objects.equals(old.projectId(), submitted.projectId()),
+              "Não é possível trocar o projeto da arte.");
+        Art art = submitted;
+        if (old == null && submitted.templateId() != null) {
+          Template template =
+              data.templates().stream()
+                  .filter(t -> t.id().equals(submitted.templateId()))
+                  .findFirst()
+                  .orElseThrow(() -> new IllegalArgumentException("Modelo não encontrado."));
+          art =
+              new Art(
+                  submitted.id(),
+                  submitted.projectId(),
+                  submitted.title(),
+                  template.format(),
+                  submitted.briefing(),
+                  template.id(),
+                  template.name(),
+                  template.instructions());
+        }
+        data.arts().removeIf(existing -> Objects.equals(existing.id(), submitted.id()));
+        data.arts().add(art);
+      }
+      case "template" -> {
+        Template template = WorkspaceRepository.JSON.fromJson(input, Template.class);
+        data.templates().removeIf(old -> Objects.equals(old.id(), template.id()));
+        data.templates().add(template);
+      }
+      case "duplicate-template" -> {
+        Template source =
+            data.templates().stream()
+                .filter(template -> template.id().equals(string(input, "id")))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Modelo não encontrado."));
+        String name = nullable(input, "name");
+        data.templates()
+            .add(
+                new Template(
+                    id(), name == null ? source.name() : name, source.format(), source.instructions()));
+      }
+      case "revision", "revision-from" -> {
+        String artId = string(input, "artId");
+        require(data.arts().stream().anyMatch(art -> art.id().equals(artId)), "Arte não encontrada.");
+        String sourceId = nullable(input, "sourceRevisionId");
+        if (operation.equals("revision-from"))
+          require(sourceId != null, "Informe a revisão de origem.");
+        if (sourceId != null)
+          require(
+              data.revisions().stream()
+                  .anyMatch(revision -> revision.id().equals(sourceId) && revision.artId().equals(artId)),
+              "Revisão de origem inválida.");
+        int sequence =
+            data.revisions().stream()
+                    .filter(revision -> revision.artId().equals(artId))
+                    .mapToInt(Revision::sequence)
+                    .max()
+                    .orElse(0)
+                + 1;
+        data.revisions()
+            .add(
+                new Revision(
+                    id(),
+                    artId,
+                    sequence,
+                    sourceId,
+                    string(input, "instructions"),
+                    strings(input, "preserveElements"),
+                    strings(input, "modifyElements"),
+                    string(input, "generatedContext"),
+                    Instant.now().toString(),
+                    null));
+      }
+      case "approve-revision" -> {
+        String revisionId = string(input, "id");
+        Revision old =
+            data.revisions().stream()
+                .filter(revision -> revision.id().equals(revisionId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Revisão não encontrada."));
+        require(old.approvedAt() == null, "Esta revisão já foi aprovada.");
+        data.revisions()
+            .set(
+                data.revisions().indexOf(old),
+                new Revision(
+                    old.id(),
+                    old.artId(),
+                    old.sequence(),
+                    old.sourceRevisionId(),
+                    old.instructions(),
+                    old.preserveElements(),
+                    old.modifyElements(),
+                    old.generatedContext(),
+                    old.createdAt(),
+                    Instant.now().toString()));
+      }
       case "campaign" -> {
         Campaign campaign = WorkspaceRepository.JSON.fromJson(input, Campaign.class);
-        for (Campaign old : data.campaigns())
-          if (Objects.equals(old.id(), campaign.id()))
-            require(
-                Objects.equals(old.clientId(), campaign.clientId()),
-                "Não é possível trocar o cliente da campanha.");
-        data.campaigns().removeIf(c -> Objects.equals(c.id(), campaign.id()));
-        data.campaigns().add(campaign);
+        Project old =
+            data.projects().stream()
+                .filter(project -> project.id().equals(campaign.id()))
+                .findFirst()
+                .orElse(null);
+        if (old != null)
+          require(
+              old.clientId().equals(campaign.clientId()),
+              "Não é possível trocar o cliente da campanha.");
+        data.projects().removeIf(project -> project.id().equals(campaign.id()));
+        data.projects()
+            .add(
+                new Project(
+                    campaign.id(),
+                    campaign.clientId(),
+                    campaign.title(),
+                    campaign.objective(),
+                    campaign.audience(),
+                    campaign.status()));
+        String artId = Workspace.migratedId("art", campaign.id());
+        data.arts().removeIf(art -> art.id().equals(artId));
+        data.arts()
+            .add(
+                new Art(
+                    artId,
+                    campaign.id(),
+                    campaign.title(),
+                    campaign.format(),
+                    campaign.request(),
+                    null,
+                    "",
+                    ""));
       }
       case "decision" ->
           data.decisions()
@@ -42,7 +183,9 @@ public final class WorkspaceService {
                   new Decision(
                       id(),
                       string(input, "clientId"),
-                      nullable(input, "campaignId"),
+                      input.has("projectId")
+                          ? nullable(input, "projectId")
+                          : nullable(input, "campaignId"),
                       string(input, "text"),
                       Instant.now().toString(),
                       null,
@@ -66,7 +209,7 @@ public final class WorkspaceService {
                 new Decision(
                     old.id(),
                     old.clientId(),
-                    old.campaignId(),
+                    old.projectId(),
                     old.text(),
                     old.createdAt(),
                     now,
@@ -78,7 +221,7 @@ public final class WorkspaceService {
                   new Decision(
                       id(),
                       old.clientId(),
-                      old.campaignId(),
+                      old.projectId(),
                       string(input, "text"),
                       now,
                       null,
@@ -91,6 +234,11 @@ public final class WorkspaceService {
   }
 
   public Workspace addReferences(String clientId, List<String> paths) throws IOException {
+    return addReferences(clientId, null, null, paths);
+  }
+
+  public Workspace addReferences(
+      String clientId, String projectId, String artId, List<String> paths) throws IOException {
     Workspace data = repository.read();
     require(paths != null && !paths.isEmpty(), "Nenhum arquivo selecionado.");
     for (String filename : paths) {
@@ -111,6 +259,8 @@ public final class WorkspaceService {
               new Reference(
                   id(),
                   clientId,
+                  projectId,
+                  artId,
                   name,
                   mime,
                   Base64.getEncoder().encodeToString(Files.readAllBytes(path)),
@@ -146,5 +296,16 @@ public final class WorkspaceService {
         input.get(key).isJsonPrimitive() && input.getAsJsonPrimitive(key).isString(),
         "Campo inválido: " + key);
     return input.get(key).getAsString();
+  }
+
+  private static List<String> strings(JsonObject input, String key) {
+    require(input.has(key) && input.get(key).isJsonArray(), "Campo inválido: " + key);
+    try {
+      return new ArrayList<>(
+          Arrays.asList(
+              WorkspaceRepository.JSON.fromJson(input.get(key), String[].class)));
+    } catch (RuntimeException error) {
+      throw new IllegalArgumentException("Campo inválido: " + key);
+    }
   }
 }

@@ -43,6 +43,8 @@ public final class Main {
                 case "attach" ->
                     service.addReferences(
                         WorkspaceService.string(params, "clientId"),
+                        WorkspaceService.nullable(params, "projectId"),
+                        WorkspaceService.nullable(params, "artId"),
                         List.of(
                             WorkspaceRepository.JSON.fromJson(
                                 params.get("files"), String[].class)));

@@ -2,10 +2,8 @@ package io.github.juliaromeira.creativehub.persistence;
 
 import static java.nio.file.StandardOpenOption.*;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.Strictness;
-import io.github.juliaromeira.creativehub.model.Workspace;
+import com.google.gson.*;
+import io.github.juliaromeira.creativehub.model.*;
 import io.github.juliaromeira.creativehub.service.WorkspaceValidator;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,15 +11,14 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.UUID;
+import java.util.*;
 
 /** Acesso ao disco separado das regras de negócio; mantém o formato legado. */
 public final class WorkspaceRepository implements AutoCloseable {
+  private static final Gson PLAIN_JSON = gson().create();
   public static final Gson JSON =
-      new GsonBuilder()
-          .serializeNulls()
-          .disableHtmlEscaping()
-          .setStrictness(Strictness.STRICT)
+      gson()
+          .registerTypeAdapter(Workspace.class, new WorkspaceJsonAdapter())
           .create();
   private final Path file;
   private final WorkspaceValidator validator = new WorkspaceValidator();
@@ -49,8 +46,9 @@ public final class WorkspaceRepository implements AutoCloseable {
     if (Files.size(source) > WorkspaceValidator.MAX_FILE_BYTES)
       throw new IOException("Arquivo maior que 100 MB.");
     try {
-      Workspace data =
-          JSON.fromJson(Files.readString(source, StandardCharsets.UTF_8), Workspace.class);
+      JsonObject root =
+          JsonParser.parseString(Files.readString(source, StandardCharsets.UTF_8)).getAsJsonObject();
+      Workspace data = readVersion(root);
       validator.validate(data);
       return data;
     } catch (RuntimeException e) {
@@ -60,7 +58,7 @@ public final class WorkspaceRepository implements AutoCloseable {
 
   public Workspace save(Workspace data) throws IOException {
     byte[] bytes = encode(data);
-    preserveBeforeJava();
+    preserveLegacy();
     if (Files.exists(file))
       atomicWrite(file.resolveSibling("workspace.json.previous"), Files.readAllBytes(file));
     atomicWrite(file, bytes);
@@ -96,11 +94,113 @@ public final class WorkspaceRepository implements AutoCloseable {
     return bytes;
   }
 
-  private void preserveBeforeJava() throws IOException {
-    Path snapshot = file.resolveSibling("workspace.json.before-java-v020");
-    if (Files.exists(file) && !Files.exists(snapshot)) {
-      // Não reserializa: preserva exatamente os bytes da base anterior.
-      atomicWrite(snapshot, Files.readAllBytes(file));
+  private static Workspace readVersion(JsonObject root) {
+    if (!root.has("version") || !root.get("version").isJsonPrimitive())
+      throw new IllegalArgumentException("Versão de dados ausente.");
+    int version = root.get("version").getAsInt();
+    if (version == 2) return JSON.fromJson(root, Workspace.class);
+    if (version != 1) throw new IllegalArgumentException("Versão de dados não suportada.");
+
+    List<Client> clients = list(root, "clients", Client.class);
+    List<Campaign> campaigns = list(root, "campaigns", Campaign.class);
+    List<Reference> references = new ArrayList<>();
+    for (JsonElement element : array(root, "references")) {
+      JsonObject reference = element.getAsJsonObject();
+      references.add(
+          new Reference(
+              requiredString(reference, "id"),
+              requiredString(reference, "clientId"),
+              requiredString(reference, "name"),
+              requiredString(reference, "mime"),
+              requiredString(reference, "data"),
+              requiredString(reference, "createdAt")));
+    }
+    List<Decision> decisions = new ArrayList<>();
+    for (JsonElement element : array(root, "decisions")) {
+      JsonObject decision = element.getAsJsonObject();
+      decisions.add(
+          new Decision(
+              requiredString(decision, "id"),
+              requiredString(decision, "clientId"),
+              optionalString(decision, "campaignId"),
+              requiredString(decision, "text"),
+              requiredString(decision, "createdAt"),
+              optionalString(decision, "invalidatedAt"),
+              requiredString(decision, "reason"),
+              optionalString(decision, "replaces")));
+    }
+    return new Workspace(1, clients, campaigns, decisions, references);
+  }
+
+  private void preserveLegacy() throws IOException {
+    if (!Files.exists(file) || storedVersion() != 1) return;
+    byte[] original = Files.readAllBytes(file);
+    Path snapshot = file.resolveSibling("workspace.json.before-v2");
+    if (!Files.exists(snapshot)) atomicWrite(snapshot, original);
+    // Mantido para recuperação de instalações 0.2/0.3 já documentada.
+    Path previousSnapshot = file.resolveSibling("workspace.json.before-java-v020");
+    if (!Files.exists(previousSnapshot)) atomicWrite(previousSnapshot, original);
+  }
+
+  private int storedVersion() throws IOException {
+    try {
+      return JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8))
+          .getAsJsonObject()
+          .get("version")
+          .getAsInt();
+    } catch (RuntimeException error) {
+      // A restauração já preservou o arquivo inválido e precisa conseguir substituí-lo.
+      return -1;
+    }
+  }
+
+  private static JsonArray array(JsonObject root, String key) {
+    if (!root.has(key) || !root.get(key).isJsonArray())
+      throw new IllegalArgumentException("Coleção de dados inválida.");
+    return root.getAsJsonArray(key);
+  }
+
+  private static <T> List<T> list(JsonObject root, String key, Class<T> type) {
+    List<T> result = new ArrayList<>();
+    for (JsonElement element : array(root, key)) result.add(PLAIN_JSON.fromJson(element, type));
+    return result;
+  }
+
+  private static String requiredString(JsonObject object, String key) {
+    String value = optionalString(object, key);
+    if (value == null) throw new IllegalArgumentException("Campo ausente: " + key);
+    return value;
+  }
+
+  private static String optionalString(JsonObject object, String key) {
+    if (!object.has(key) || object.get(key).isJsonNull()) return null;
+    if (!object.get(key).isJsonPrimitive() || !object.getAsJsonPrimitive(key).isString())
+      throw new IllegalArgumentException("Campo inválido: " + key);
+    return object.get(key).getAsString();
+  }
+
+  private static GsonBuilder gson() {
+    return new GsonBuilder()
+        .serializeNulls()
+        .disableHtmlEscaping()
+        .setStrictness(Strictness.STRICT);
+  }
+
+  private static final class WorkspaceJsonAdapter
+      implements JsonSerializer<Workspace>, JsonDeserializer<Workspace> {
+    @Override
+    public JsonElement serialize(
+        Workspace source, java.lang.reflect.Type type, JsonSerializationContext context) {
+      return PLAIN_JSON.toJsonTree(source);
+    }
+
+    @Override
+    public Workspace deserialize(
+        JsonElement json, java.lang.reflect.Type type, JsonDeserializationContext context) {
+      JsonObject root = json.getAsJsonObject();
+      if (root.has("version") && root.get("version").getAsInt() == 2)
+        return PLAIN_JSON.fromJson(root, Workspace.class);
+      return readVersion(root);
     }
   }
 
