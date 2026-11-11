@@ -1,5 +1,15 @@
 # Relatório de QA — 29/10/2026
 
+## Etapa 3 — contexto e controle de alterações — 11/11/2026
+
+- JUnit: 19/19 aprovados. Os quatro testes de prompt cobrem compatibilidade anterior, tipos de entrega, isolamento, composição Cliente → Projeto → Arte → Revisão, preservação dos dados e conflitos com elementos protegidos.
+- Node/ponte Java: 12/12 aprovados, mantendo comunicação, persistência, runtime e recuperação.
+- Electron/Playwright: 9/9 fluxos aplicáveis aprovados e 1 teste do executável empacotado ignorado, como esperado sem um novo pacote. A primeira execução revelou regressão na orientação sobre instrução antiga de entrega; a frase obrigatória foi restaurada e o teste direcionado passou antes da suíte completa.
+- Duas tentativas agregadas de `npm run check` pararam na limpeza de pastas temporárias pelo JUnit no Windows (`DirectoryNotEmptyException`), em testes diferentes e depois de todas as asserções. A repetição isolada do Java passou 19/19; Node e Electron foram executados separadamente. O incidente é classificado como falha intermitente de limpeza do ambiente, não como aprovação de uma execução agregada limpa.
+- Cenário crítico fictício: publicação Instagram, revisão para trocar apenas a imagem principal, preservando cores, logotipo e tipografia. O resultado inclui marca, modelo, briefing, revisão, decisão e referência corretos e exclui marcadores de outro projeto e cliente.
+- Dados exclusivamente fictícios e diretórios temporários. Nenhuma base pessoal, serviço externo, instalação ou executável publicado foi usado.
+- Validação prática com uma designer permanece pendente; a Etapa 4 deve registrá-la como pendência se não for realizada.
+
 ## Etapa 2 — estrutura e persistência v2 — 10/11/2026
 
 - JUnit: 17/17 aprovados. Quatro testes específicos cobrem migração v1 sem escrita na leitura, snapshot byte a byte, IDs determinísticos, múltiplos projetos/artes, snapshot de modelo, duplicação, revisões derivadas, aprovação, relações inválidas, falha sem gravação parcial e backup/restauração v1/v2.

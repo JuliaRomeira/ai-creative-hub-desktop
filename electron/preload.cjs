@@ -7,8 +7,10 @@ const invoke = async (channel, ...args) => {
 contextBridge.exposeInMainWorld("hub", {
   read: () => invoke("read"),
   update: (type, input) => invoke("update", type, input),
-  context: (clientId, campaignId, output) =>
-    invoke("context", clientId, campaignId, output),
+  context: (clientId, campaignId, artId, revisionId, output) =>
+    revisionId === undefined && output === undefined
+      ? invoke("context", clientId, campaignId, null, null, artId)
+      : invoke("context", clientId, campaignId, artId, revisionId, output),
   attach: (id) => invoke("attach", id),
   saveReference: (id) => invoke("save-reference", id),
   copy: (text) => invoke("copy", text),

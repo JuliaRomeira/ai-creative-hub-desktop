@@ -29,7 +29,8 @@ Capturas do aplicativo Electron durante o teste automatizado. **Ateliê Aurora �
 - Revisões acrescentadas ao histórico, com origem opcional em versão anterior e aprovação sem sobrescrever outras versões.
 - Orientações permanentes do cliente e decisões específicas de projeto.
 - Correção e invalidação com motivo e data, mantendo o registro anterior no histórico.
-- Prompt determinístico usando a marca, a campanha escolhida e somente decisões válidas. O usuário escolhe entre arte final, roteiro, prompt para ferramenta de imagem ou somente contexto. O resultado é editável, salvável e copiável.
+- Prompt determinístico usando marca, projeto, modelo, arte, revisão e somente decisões e referências válidas para o escopo escolhido. O usuário seleciona a arte, a revisão e o tipo de entrega. O resultado é editável, salvável e copiável.
+- Revisões indicam elementos a preservar ou modificar. Conflitos explícitos e tentativas de alterar logotipo, cores ou tipografia protegidos são bloqueados antes de gerar o contexto.
 - Relação das referências que devem ser anexadas manualmente. **Copiar o texto não envia arquivos para outra IA.**
 - Persistência local entre sessões e backup completo, incluindo os bytes dos anexos.
 - Importação validada, com confirmação da substituição e cópia local dos dados anteriores.
@@ -39,9 +40,9 @@ Capturas do aplicativo Electron durante o teste automatizado. **Ateliê Aurora �
 
 1. Cadastre o cliente e preencha as informações da marca.
 2. Em **Referências**, adicione logos e exemplos aprovados.
-3. Crie uma campanha com o pedido atual.
-4. Em **Decisões**, registre regras permanentes ou orientações exclusivas da campanha aberta.
-5. Abra **Contexto**, escolha o resultado desejado e clique em **Atualizar com dados atuais**. O aplicativo acrescenta a tarefa para a IA ao briefing. Revise, edite se necessário, salve o rascunho e copie.
+3. Crie um projeto, escolha ou crie um modelo e registre as artes necessárias.
+4. Em **Decisões**, registre regras permanentes ou orientações exclusivas do projeto aberto. Em **Modelos e artes**, registre a revisão e o que deve ser preservado ou modificado.
+5. Abra **Contexto**, escolha a arte, a revisão e o resultado desejado e clique em **Atualizar com dados atuais**. O aplicativo acrescenta a tarefa para a IA ao briefing. Revise, edite se necessário, salve o rascunho e copie.
 6. Na ferramenta escolhida, cole o texto e anexe as referências separadamente.
 7. Registre as próximas decisões. Use **Corrigir** ou **Invalidar** quando uma orientação deixar de valer e atualize o contexto novamente.
 

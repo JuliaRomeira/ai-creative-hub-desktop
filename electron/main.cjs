@@ -94,8 +94,14 @@ if (locked)
     handle("update", (type, input) =>
       requestBackend("update", { type, input }),
     );
-    handle("context", (clientId, campaignId, output) =>
-      requestBackend("context", { clientId, campaignId, output }),
+    handle("context", (clientId, campaignId, artId, revisionId, output) =>
+      requestBackend("context", {
+        clientId,
+        campaignId,
+        artId,
+        revisionId,
+        output,
+      }),
     );
     handle("attach", async (clientId) => {
       const result = await dialog.showOpenDialog(win, {

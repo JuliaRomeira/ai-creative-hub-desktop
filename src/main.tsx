@@ -56,6 +56,8 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState("");
   const [contextOutput, setContextOutput] = useState<ContextOutput>("art");
+  const [contextArtId, setContextArtId] = useState("");
+  const [contextRevisionId, setContextRevisionId] = useState("");
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<string>();
   const [search, setSearch] = useState("");
@@ -64,9 +66,27 @@ function App() {
   const campaign = campaigns.find(
     (c) => c.id === campaignId && c.clientId === clientId,
   );
+  const contextArts =
+    data?.arts.filter((item) => item.projectId === campaignId) || [];
+  const contextRevisions =
+    data?.revisions
+      .filter((item) => item.artId === contextArtId)
+      .sort((a, b) => b.sequence - a.sequence) || [];
   useEffect(() => {
     setContextOutput("art");
   }, [clientId, campaignId]);
+  useEffect(() => {
+    setContextArtId(
+      data?.arts.find((item) => item.projectId === campaignId)?.id || "",
+    );
+  }, [campaignId, data?.arts]);
+  useEffect(() => {
+    setContextRevisionId(
+      data?.revisions
+        .filter((item) => item.artId === contextArtId)
+        .sort((a, b) => b.sequence - a.sequence)[0]?.id || "",
+    );
+  }, [contextArtId, data?.revisions]);
   useEffect(() => {
     window.hub
       .read()
@@ -252,8 +272,7 @@ function App() {
   const decisions =
     data?.decisions.filter(
       (d) =>
-        d.clientId === clientId &&
-        (!d.projectId || d.projectId === campaignId),
+        d.clientId === clientId && (!d.projectId || d.projectId === campaignId),
     ) || [];
   const refs = data?.references.filter((r) => r.clientId === clientId) || [];
   return (
@@ -637,7 +656,7 @@ function App() {
                       </p>
                     </div>
                     <button
-                      disabled={busy}
+                      disabled={busy || !contextArtId}
                       className="primary"
                       onClick={() => setTab("Contexto")}
                     >
@@ -746,7 +765,7 @@ function App() {
                       </p>
                     </div>
                     <button
-                      disabled={busy}
+                      disabled={busy || !contextArtId}
                       onClick={() => {
                         if (
                           !draft ||
@@ -759,6 +778,8 @@ function App() {
                               await window.hub.context(
                                 client.id,
                                 campaign.id,
+                                contextArtId,
+                                contextRevisionId || null,
                                 contextOutput,
                               ),
                             );
@@ -769,6 +790,43 @@ function App() {
                     >
                       Atualizar com dados atuais
                     </button>
+                  </div>
+                  <div className="form-grid">
+                    <label htmlFor="context-art">
+                      Arte
+                      <select
+                        id="context-art"
+                        disabled={busy}
+                        value={contextArtId}
+                        onChange={(event) =>
+                          setContextArtId(event.target.value)
+                        }
+                      >
+                        {contextArts.map((art) => (
+                          <option key={art.id} value={art.id}>
+                            {art.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label htmlFor="context-revision">
+                      Revisão
+                      <select
+                        id="context-revision"
+                        disabled={busy}
+                        value={contextRevisionId}
+                        onChange={(event) =>
+                          setContextRevisionId(event.target.value)
+                        }
+                      >
+                        <option value="">Sem revisão</option>
+                        {contextRevisions.map((revision) => (
+                          <option key={revision.id} value={revision.id}>
+                            Revisão {revision.sequence}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
                   <label htmlFor="context-output">Resultado desejado</label>
                   <select
@@ -817,14 +875,15 @@ function App() {
                           onClick={() =>
                             run(async () => {
                               const art = data.arts.find(
-                                (item) => item.projectId === campaign.id,
+                                (item) => item.id === contextArtId,
                               );
                               if (!art) throw new Error("Arte não encontrada.");
                               setData(
                                 await window.hub.update("revision", {
                                   artId: art.id,
-                                  sourceRevisionId: null,
-                                  instructions: "Contexto revisado manualmente.",
+                                  sourceRevisionId: contextRevisionId || null,
+                                  instructions:
+                                    "Contexto revisado manualmente.",
                                   preserveElements: [],
                                   modifyElements: [],
                                   generatedContext: draft,
@@ -1121,7 +1180,9 @@ function StructurePanel({
             <textarea name="instructions" maxLength={20000} rows={2} />
           </label>
         </div>
-        <button className="primary" disabled={busy}>Criar modelo</button>
+        <button className="primary" disabled={busy}>
+          Criar modelo
+        </button>
       </form>
       <div className="campaign-grid">
         {data.templates.map((template) => (
@@ -1146,10 +1207,16 @@ function StructurePanel({
             </label>
             <label>
               Instruções
-              <textarea name="instructions" defaultValue={template.instructions} rows={2} />
+              <textarea
+                name="instructions"
+                defaultValue={template.instructions}
+                rows={2}
+              />
             </label>
             <div className="actions">
-              <button disabled={busy} type="submit">Salvar modelo</button>
+              <button disabled={busy} type="submit">
+                Salvar modelo
+              </button>
               <button
                 disabled={busy}
                 type="button"
@@ -1174,7 +1241,9 @@ function StructurePanel({
         </div>
       </div>
       {!projectId ? (
-        <div className="empty"><p>Abra um projeto para criar artes e revisões.</p></div>
+        <div className="empty">
+          <p>Abra um projeto para criar artes e revisões.</p>
+        </div>
       ) : (
         <>
           <form
@@ -1207,7 +1276,9 @@ function StructurePanel({
                 <select name="templateId" defaultValue="">
                   <option value="">Em branco</option>
                   {data.templates.map((template) => (
-                    <option key={template.id} value={template.id}>{template.name}</option>
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1220,7 +1291,9 @@ function StructurePanel({
                 <textarea name="briefing" maxLength={20000} rows={3} />
               </label>
             </div>
-            <button className="primary" disabled={busy}>Criar arte</button>
+            <button className="primary" disabled={busy}>
+              Criar arte
+            </button>
           </form>
           <div className="campaign-grid">
             {arts.map((art) => (
@@ -1244,7 +1317,10 @@ function StructurePanel({
           <div className="section-heading">
             <div>
               <h2>Revisões de {selectedArt.title}</h2>
-              <p>O histórico é acrescentado; versões anteriores não são sobrescritas.</p>
+              <p>
+                O histórico é acrescentado; versões anteriores não são
+                sobrescritas.
+              </p>
             </div>
           </div>
           <form
@@ -1252,14 +1328,17 @@ function StructurePanel({
             onSubmit={async (event) => {
               event.preventDefault();
               const input = values(event.currentTarget);
-              await update(input.sourceRevisionId ? "revision-from" : "revision", {
-                artId: selectedArt.id,
-                sourceRevisionId: input.sourceRevisionId || null,
-                instructions: input.instructions,
-                preserveElements: list(input.preserveElements),
-                modifyElements: list(input.modifyElements),
-                generatedContext: input.generatedContext,
-              });
+              await update(
+                input.sourceRevisionId ? "revision-from" : "revision",
+                {
+                  artId: selectedArt.id,
+                  sourceRevisionId: input.sourceRevisionId || null,
+                  instructions: input.instructions,
+                  preserveElements: list(input.preserveElements),
+                  modifyElements: list(input.modifyElements),
+                  generatedContext: input.generatedContext,
+                },
+              );
               event.currentTarget.reset();
             }}
           >
@@ -1269,7 +1348,9 @@ function StructurePanel({
                 <select name="sourceRevisionId" defaultValue="">
                   <option value="">Nova revisão</option>
                   {revisions.map((revision) => (
-                    <option key={revision.id} value={revision.id}>Revisão {revision.sequence}</option>
+                    <option key={revision.id} value={revision.id}>
+                      Revisão {revision.sequence}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1290,7 +1371,9 @@ function StructurePanel({
                 <textarea name="generatedContext" maxLength={200000} rows={4} />
               </label>
             </div>
-            <button className="primary" disabled={busy}>Criar revisão</button>
+            <button className="primary" disabled={busy}>
+              Criar revisão
+            </button>
           </form>
           <div className="decision-list">
             {revisions.map((revision) => (
@@ -1307,7 +1390,9 @@ function StructurePanel({
                 {!revision.approvedAt && (
                   <button
                     disabled={busy}
-                    onClick={() => update("approve-revision", { id: revision.id })}
+                    onClick={() =>
+                      update("approve-revision", { id: revision.id })
+                    }
                   >
                     Aprovar revisão
                   </button>

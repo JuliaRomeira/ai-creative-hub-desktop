@@ -93,6 +93,8 @@ declare global {
       context(
         clientId: string,
         campaignId: string,
+        artId: string,
+        revisionId: string | null,
         output?: ContextOutput,
       ): Promise<string>;
       attach(id: string): Promise<Workspace | null>;

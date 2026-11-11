@@ -1,5 +1,15 @@
 # Estado do projeto
 
+## Evolução Cliente → Projeto → Arte → Revisão — Etapa 3
+
+- O gerador determinístico agora recebe cliente, projeto, arte e revisão explícitos e valida todos os vínculos antes de montar o texto.
+- O contexto combina identidade visual, regras permanentes, decisões do projeto, snapshot do modelo, briefing da arte, instruções da revisão e referências aplicáveis ao escopo selecionado.
+- A aba **Contexto** permite escolher a arte e a revisão. O rascunho continua editável e só é substituído após confirmação.
+- Elementos marcados simultaneamente para preservar e modificar são rejeitados. Pedidos para alterar logotipo, cores ou tipografia protegidos pelas regras permanentes também são rejeitados sem modificar os dados.
+- O cenário automatizado de publicação para Instagram altera somente a imagem principal, preserva cores, logotipo e tipografia e confirma que dados de outro projeto ou cliente não entram no resultado.
+- O funcionamento continua totalmente local: nenhuma API, internet, modelo de IA ou dependência nova foi adicionada.
+- Detecção semântica livre não foi implementada; conflitos são detectados por vínculos, seleções explícitas e termos protegidos conhecidos, de forma previsível e testável.
+
 ## Evolução Cliente → Projeto → Arte → Revisão — Etapa 2
 
 - Implementado contrato JSON v2 com projetos, artes, modelos, revisões, decisões por projeto e referências com escopo validado.

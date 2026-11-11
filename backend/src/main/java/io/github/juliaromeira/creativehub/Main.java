@@ -33,13 +33,23 @@ public final class Main {
                 case "update" ->
                     service.update(
                         WorkspaceService.string(params, "type"), params.getAsJsonObject("input"));
-                case "context" ->
-                    new ContextService()
-                        .prepare(
-                            repository.read(),
-                            WorkspaceService.string(params, "clientId"),
-                            WorkspaceService.string(params, "campaignId"),
-                            WorkspaceService.nullable(params, "output"));
+                case "context" -> {
+                  String artId = WorkspaceService.nullable(params, "artId");
+                  ContextService context = new ContextService();
+                  yield artId == null
+                      ? context.prepare(
+                          repository.read(),
+                          WorkspaceService.string(params, "clientId"),
+                          WorkspaceService.string(params, "campaignId"),
+                          WorkspaceService.nullable(params, "output"))
+                      : context.prepare(
+                          repository.read(),
+                          WorkspaceService.string(params, "clientId"),
+                          WorkspaceService.string(params, "campaignId"),
+                          artId,
+                          WorkspaceService.nullable(params, "revisionId"),
+                          WorkspaceService.nullable(params, "output"));
+                }
                 case "attach" ->
                     service.addReferences(
                         WorkspaceService.string(params, "clientId"),
