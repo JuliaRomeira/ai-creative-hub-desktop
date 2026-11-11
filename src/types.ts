@@ -97,7 +97,11 @@ declare global {
         revisionId: string | null,
         output?: ContextOutput,
       ): Promise<string>;
-      attach(id: string): Promise<Workspace | null>;
+      attach(
+        clientId: string,
+        projectId?: string | null,
+        artId?: string | null,
+      ): Promise<Workspace | null>;
       saveReference(id: string): Promise<boolean>;
       copy(text: string): Promise<boolean>;
       export(): Promise<boolean>;

@@ -103,7 +103,7 @@ if (locked)
         output,
       }),
     );
-    handle("attach", async (clientId) => {
+    handle("attach", async (clientId, projectId, artId) => {
       const result = await dialog.showOpenDialog(win, {
         title: "Adicionar referências",
         properties: ["openFile", "multiSelections"],
@@ -116,7 +116,12 @@ if (locked)
       });
       return result.canceled
         ? null
-        : requestBackend("attach", { clientId, files: result.filePaths });
+        : requestBackend("attach", {
+            clientId,
+            projectId,
+            artId,
+            files: result.filePaths,
+          });
     });
     handle("save-reference", async (id) => {
       const name = await requestBackend("reference-name", { id });

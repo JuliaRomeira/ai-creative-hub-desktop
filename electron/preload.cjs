@@ -11,7 +11,8 @@ contextBridge.exposeInMainWorld("hub", {
     revisionId === undefined && output === undefined
       ? invoke("context", clientId, campaignId, null, null, artId)
       : invoke("context", clientId, campaignId, artId, revisionId, output),
-  attach: (id) => invoke("attach", id),
+  attach: (clientId, projectId, artId) =>
+    invoke("attach", clientId, projectId, artId),
   saveReference: (id) => invoke("save-reference", id),
   copy: (text) => invoke("copy", text),
   export: () => invoke("export"),

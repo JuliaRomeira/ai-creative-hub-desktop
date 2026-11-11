@@ -58,6 +58,8 @@ function App() {
   const [contextOutput, setContextOutput] = useState<ContextOutput>("art");
   const [contextArtId, setContextArtId] = useState("");
   const [contextRevisionId, setContextRevisionId] = useState("");
+  const [referenceProjectId, setReferenceProjectId] = useState("");
+  const [referenceArtId, setReferenceArtId] = useState("");
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<string>();
   const [search, setSearch] = useState("");
@@ -73,8 +75,16 @@ function App() {
     data?.revisions
       .filter((item) => item.artId === contextArtId)
       .sort((a, b) => b.sequence - a.sequence) || [];
+  const referenceProjects =
+    data?.projects.filter((item) => item.clientId === clientId) || [];
+  const referenceArts =
+    data?.arts.filter((item) => item.projectId === referenceProjectId) || [];
   useEffect(() => {
     setContextOutput("art");
+  }, [clientId, campaignId]);
+  useEffect(() => {
+    setReferenceProjectId(campaignId);
+    setReferenceArtId("");
   }, [clientId, campaignId]);
   useEffect(() => {
     setContextArtId(
@@ -288,6 +298,11 @@ function App() {
         d.clientId === clientId && (!d.projectId || d.projectId === campaignId),
     ) || [];
   const refs = data?.references.filter((r) => r.clientId === clientId) || [];
+  const contextRefs = refs.filter(
+    (reference) =>
+      (!reference.projectId || reference.projectId === campaignId) &&
+      (!reference.artId || reference.artId === contextArtId),
+  );
   return (
     <div className="app">
       <aside className="sidebar">
@@ -564,7 +579,11 @@ function App() {
                       disabled={busy}
                       onClick={() =>
                         run(async () => {
-                          const next = await window.hub.attach(clientId);
+                          const next = await window.hub.attach(
+                            clientId,
+                            referenceProjectId || null,
+                            referenceArtId || null,
+                          );
                           if (next) {
                             setData(next);
                             setNotice(
@@ -576,6 +595,45 @@ function App() {
                     >
                       + Adicionar referências
                     </button>
+                  </div>
+                  <div className="form-grid">
+                    <label htmlFor="reference-project">
+                      Associar ao projeto
+                      <select
+                        id="reference-project"
+                        disabled={busy}
+                        value={referenceProjectId}
+                        onChange={(event) => {
+                          setReferenceProjectId(event.target.value);
+                          setReferenceArtId("");
+                        }}
+                      >
+                        <option value="">Somente ao cliente</option>
+                        {referenceProjects.map((project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label htmlFor="reference-art">
+                      Associar à arte
+                      <select
+                        id="reference-art"
+                        disabled={busy || !referenceProjectId}
+                        value={referenceArtId}
+                        onChange={(event) =>
+                          setReferenceArtId(event.target.value)
+                        }
+                      >
+                        <option value="">Todas as artes do projeto</option>
+                        {referenceArts.map((art) => (
+                          <option key={art.id} value={art.id}>
+                            {art.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
                   <div className="reference-grid">
                     {refs.map((r) => (
@@ -596,6 +654,13 @@ function App() {
                           <div className="pdf">PDF</div>
                         )}
                         <h3>{r.name}</h3>
+                        <small>
+                          {r.artId
+                            ? `Arte: ${data.arts.find((item) => item.id === r.artId)?.title || "não encontrada"}`
+                            : r.projectId
+                              ? `Projeto: ${data.projects.find((item) => item.id === r.projectId)?.title || "não encontrado"}`
+                              : "Referência geral do cliente"}
+                        </small>
                         <small>{date(r.createdAt)}</small>
                         <button
                           disabled={busy}
@@ -941,11 +1006,13 @@ function App() {
                         Copiar não envia as referências para outra ferramenta.
                       </p>
                       <ul>
-                        {refs.map((r) => (
+                        {contextRefs.map((r) => (
                           <li key={r.id}>{r.name}</li>
                         ))}
                       </ul>
-                      {!refs.length && <p>Nenhuma referência cadastrada.</p>}
+                      {!contextRefs.length && (
+                        <p>Nenhuma referência para esta arte.</p>
+                      )}
                       <p>
                         Ao alterar decisões ou a marca, atualize o texto e
                         revise novamente.
@@ -1398,6 +1465,18 @@ function StructurePanel({
               <article className="decision" key={revision.id}>
                 <h3>Revisão {revision.sequence}</h3>
                 <p>{revision.instructions || "Sem instruções adicionais."}</p>
+                {!!revision.preserveElements.length && (
+                  <p>
+                    <strong>Preservar:</strong>{" "}
+                    {revision.preserveElements.join(", ")}
+                  </p>
+                )}
+                {!!revision.modifyElements.length && (
+                  <p>
+                    <strong>Modificar:</strong>{" "}
+                    {revision.modifyElements.join(", ")}
+                  </p>
+                )}
                 <small>
                   {revision.approvedAt
                     ? `Aprovada em ${date(revision.approvedAt)}`

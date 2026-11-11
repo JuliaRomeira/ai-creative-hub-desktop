@@ -23,10 +23,10 @@ Capturas do aplicativo Electron durante o teste automatizado. **Ateliê Aurora �
 ## O que funciona
 
 - Cadastro e edição de clientes: empresa, público, tom, cores e orientações da marca; busca por nome.
-- Referências por cliente: PNG, JPG, WEBP e PDF. Imagens têm prévia ampliada; qualquer referência pode ser salva como cópia. PDFs são consultados no visualizador externo depois de salvar a cópia.
+- Referências por cliente, projeto ou arte: PNG, JPG, WEBP e PDF. O escopo fica identificado na interface; imagens têm prévia ampliada e qualquer referência pode ser salva como cópia. PDFs são consultados no visualizador externo depois de salvar a cópia.
 - Vários projetos por cliente e várias artes por projeto.
 - Modelos de arte editáveis, duplicáveis e reutilizáveis sem alterar artes existentes.
-- Revisões acrescentadas ao histórico, com origem opcional em versão anterior e aprovação sem sobrescrever outras versões.
+- Revisões acrescentadas ao histórico, com instruções e elementos preservados/modificados, origem opcional em versão anterior e aprovação sem sobrescrever outras versões.
 - Orientações permanentes do cliente e decisões específicas de projeto.
 - Correção e invalidação com motivo e data, mantendo o registro anterior no histórico.
 - Prompt determinístico usando marca, projeto, modelo, arte, revisão e somente decisões e referências válidas para o escopo escolhido. O usuário seleciona a arte, a revisão e o tipo de entrega. O resultado é editável, salvável e copiável.

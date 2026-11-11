@@ -1,5 +1,14 @@
 # Relatório de QA — 29/10/2026
 
+## Etapa 5 — referências e histórico — 11/11/2026
+
+- Fluxo Electron específico cria referência vinculada à arte, apaga o arquivo de origem, cria três revisões, deriva a terceira da primeira e aprova somente a segunda.
+- Depois de encerrar e reabrir o aplicativo, as revisões 1, 2 e 3 continuam visíveis, a revisão 2 mantém `approvedAt`, e instruções, elementos preservados e modificados permanecem identificados.
+- A imagem incorporada continua visível e o JSON confirma os relacionamentos `clientId`, `projectId` e `artId`. A validação Java existente rejeita relações órfãs antes de salvar.
+- O painel de contexto filtra a lista de anexos pelo projeto e arte selecionados, evitando sugerir manualmente uma referência de outro trabalho do mesmo cliente.
+- `npm run check` aprovado: JUnit 19/19, Node/ponte/runtime 12/12 e Electron 11/11 aplicáveis; 1 teste exclusivo do executável empacotado ignorado nesta execução de desenvolvimento.
+- Dados fictícios em perfil temporário; nenhum arquivo ou base pessoal foi usado.
+
 ## Etapa 4 — interface e experiência — 11/11/2026
 
 - Novo fluxo Electron cobre cliente → projeto → modelo → arte → revisão → contexto → rascunho, usando Java e armazenamento reais em perfil temporário fictício.

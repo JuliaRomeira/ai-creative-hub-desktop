@@ -1,5 +1,13 @@
 # Estado do projeto
 
+## Evolução Cliente → Projeto → Arte → Revisão — Etapa 5
+
+- Referências podem ser associadas ao cliente inteiro, a um projeto ou a uma arte. A interface identifica o escopo e o contexto lista somente arquivos aplicáveis à arte selecionada.
+- Os bytes continuam incorporados ao JSON local. Remover ou mover o arquivo original depois do cadastro não quebra a referência; arquivo ausente antes da importação produz erro sem gravação parcial.
+- Cada revisão registra instruções, elementos preservados, elementos modificados, origem, data e aprovação. A interface passou a exibir esses elementos no histórico.
+- Revisões continuam imutáveis: criar a partir de versão antiga acrescenta uma nova sequência e aprovar altera somente o campo de aprovação da revisão escolhida.
+- O cenário automatizado criou três revisões, aprovou a segunda, reiniciou o Electron e confirmou as três sequências e a aprovação correta. A referência por arte também foi recuperada depois de o original ser apagado.
+
 ## Evolução Cliente → Projeto → Arte → Revisão — Etapa 4
 
 - O fluxo real da interface permite cadastrar cliente, criar projeto, criar e escolher modelo, criar arte, registrar revisão, gerar contexto e salvar o novo rascunho.
