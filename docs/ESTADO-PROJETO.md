@@ -1,5 +1,15 @@
 # Estado do projeto
 
+## Evolução Cliente → Projeto → Arte → Revisão — Etapa 4
+
+- O fluxo real da interface permite cadastrar cliente, criar projeto, criar e escolher modelo, criar arte, registrar revisão, gerar contexto e salvar o novo rascunho.
+- Operações pendentes exibem `Processando…`, usam `aria-busy` e mantêm navegação e edição bloqueadas para evitar ações concorrentes.
+- Erros continuam preservados no alerta global e agora levam a janela ao início para que a mensagem não fique fora da área visível.
+- Modais mantêm foco preso, fecham com `Esc` e devolvem o foco ao controle que os abriu. O defeito de retorno de foco foi encontrado pelo teste de teclado e corrigido.
+- O fluxo completo foi validado na janela mínima suportada pelo Electron, 850 × 650, sem rolagem horizontal. Larguras móveis não se aplicam porque o produto desktop impede reduzir a janela abaixo de 850 px.
+- Não foram encontrados botões simulados no fluxo crítico; os controles exercitados chamam a persistência Java real.
+- Validação com uma designer em uso cotidiano: **pendente**, conforme o critério de conclusão.
+
 ## Evolução Cliente → Projeto → Arte → Revisão — Etapa 3
 
 - O gerador determinístico agora recebe cliente, projeto, arte e revisão explícitos e valida todos os vínculos antes de montar o texto.

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type {
   Client,
@@ -61,6 +61,7 @@ function App() {
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<string>();
   const [search, setSearch] = useState("");
+  const dialogOpener = useRef<HTMLElement | null>(null);
   const campaigns = campaignsFrom(data);
   const client = data?.clients.find((c) => c.id === clientId);
   const campaign = campaigns.find(
@@ -99,7 +100,6 @@ function App() {
   }, []);
   useEffect(() => {
     if (!modal && !preview) return;
-    const previous = document.activeElement as HTMLElement;
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
     function keys(event: KeyboardEvent) {
       if (event.key === "Escape" && !busy) {
@@ -137,9 +137,13 @@ function App() {
     document.addEventListener("keydown", keys);
     return () => {
       document.removeEventListener("keydown", keys);
-      previous?.focus();
     };
   }, [modal, preview, busy]);
+  useEffect(() => {
+    if (modal || preview || !dialogOpener.current) return;
+    dialogOpener.current.focus();
+    dialogOpener.current = null;
+  }, [modal, preview]);
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -159,6 +163,7 @@ function App() {
       await fn();
     } catch (e) {
       setError((e as Error).message);
+      window.scrollTo(0, 0);
     } finally {
       setBusy(false);
     }
@@ -191,11 +196,19 @@ function App() {
     setDirty(false);
     setTab("Projeto");
   }
+  function showModal(value: Modal) {
+    dialogOpener.current = document.activeElement as HTMLElement;
+    setModal(value);
+  }
+  function showPreview(id: string) {
+    dialogOpener.current = document.activeElement as HTMLElement;
+    setPreview(id);
+  }
   function newClient() {
     if (!canLeave()) return;
     setDraft(campaign?.draft || "");
     setDirty(false);
-    setModal({
+    showModal({
       kind: "client",
       value: {
         id: crypto.randomUUID(),
@@ -212,7 +225,7 @@ function App() {
     if (!canLeave()) return;
     setDraft(campaign?.draft || "");
     setDirty(false);
-    setModal({
+    showModal({
       kind: "campaign",
       value: {
         id: crypto.randomUUID(),
@@ -360,7 +373,7 @@ function App() {
           </button>
         </div>
       </aside>
-      <main>
+      <main aria-busy={busy}>
         <header className="topbar">
           <span>
             Seu espaço criativo{" "}
@@ -373,6 +386,11 @@ function App() {
         <div className="content">
           <div aria-live="polite">
             {notice && <p className="notice">{notice}</p>}
+            {busy && (
+              <p className="notice" role="status">
+                Processando…
+              </p>
+            )}
           </div>
           {error && (
             <p role="alert" className="error">
@@ -440,7 +458,7 @@ function App() {
                 </div>
                 <button
                   disabled={busy}
-                  onClick={() => setModal({ kind: "client", value: client })}
+                  onClick={() => showModal({ kind: "client", value: client })}
                 >
                   Editar cliente
                 </button>
@@ -566,7 +584,7 @@ function App() {
                           <button
                             disabled={busy}
                             className="image-button"
-                            onClick={() => setPreview(r.id)}
+                            onClick={() => showPreview(r.id)}
                             aria-label={`Ampliar ${r.name}`}
                           >
                             <img
@@ -624,7 +642,7 @@ function App() {
                     <button
                       disabled={busy}
                       onClick={() =>
-                        setModal({
+                        showModal({
                           kind: "campaign",
                           value: { ...campaign, draft },
                         })
@@ -682,7 +700,7 @@ function App() {
                     <button
                       disabled={busy}
                       className="primary"
-                      onClick={() => setModal({ kind: "decision" })}
+                      onClick={() => showModal({ kind: "decision" })}
                     >
                       + Registrar orientação
                     </button>
@@ -718,7 +736,7 @@ function App() {
                             <button
                               disabled={busy}
                               onClick={() =>
-                                setModal({
+                                showModal({
                                   kind: "decision",
                                   value: d,
                                   action: "correct",
@@ -730,7 +748,7 @@ function App() {
                             <button
                               disabled={busy}
                               onClick={() =>
-                                setModal({
+                                showModal({
                                   kind: "decision",
                                   value: d,
                                   action: "invalidate",

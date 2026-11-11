@@ -1,5 +1,15 @@
 # Relatório de QA — 29/10/2026
 
+## Etapa 4 — interface e experiência — 11/11/2026
+
+- Novo fluxo Electron cobre cliente → projeto → modelo → arte → revisão → contexto → rascunho, usando Java e armazenamento reais em perfil temporário fictício.
+- Janela testada em 850 × 650, o mínimo aceito pelo aplicativo, sem rolagem horizontal. Os testes anteriores mantêm cobertura em 900 × 700 e tamanhos maiores usados nas capturas.
+- Teste de teclado confirmou fechamento por `Esc`, foco preso no modal e retorno ao botão de origem. A primeira execução revelou que o foco voltava ao campo com `autoFocus`; o estado passou a guardar explicitamente o controle de origem e o reteste foi aprovado.
+- O teste de isolamento também confirma indicador `Processando…`, campos e navegação desabilitados durante uma resposta pendente e ausência de mistura entre clientes.
+- A aplicação desktop não suporta viewport móvel abaixo de 850 px por decisão já existente da janela Electron; não foi feita uma versão móvel ou um redesign.
+- `npm run check` final aprovado: JUnit 19/19, Node/ponte/runtime 12/12 e Electron 10/10 aplicáveis; 1 caso exclusivo do executável empacotado foi ignorado. Para eliminar a corrida de limpeza observada no `%TEMP%` do Windows sem ocultar testes, o Surefire passou a criar temporários dentro da pasta descartável `backend/target`.
+- Validação de uso real por designer: **pendente**. Os testes automatizados não substituem observação de uma pessoa usando o produto no trabalho diário.
+
 ## Etapa 3 — contexto e controle de alterações — 11/11/2026
 
 - JUnit: 19/19 aprovados. Os quatro testes de prompt cobrem compatibilidade anterior, tipos de entrega, isolamento, composição Cliente → Projeto → Arte → Revisão, preservação dos dados e conflitos com elementos protegidos.
