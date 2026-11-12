@@ -155,12 +155,13 @@ npm run package
 
 O teste end-to-end abre o Electron, preenche a interface e usa diretórios temporários com dados fictícios. As caixas nativas de seleção de arquivo e confirmação são substituídas por respostas determinísticas durante o teste; a leitura, gravação e restauração dos arquivos são reais.
 
-`npm run check` executa JUnit, testes da ponte Node/Java e do runtime e quatro fluxos da interface, além da compilação Java/TypeScript. Após empacotar, a mesma suíte verifica o portátil real e o executável instalado, incluindo um fluxo adicional dedicado ao Java incorporado. Sem executável informado, esse fluxo adicional é ignorado explicitamente. Veja [como verificar a distribuição](docs/INSTALACAO.md) e os [resultados de QA](docs/QA.md). Para estudar somente o Java: `npm run test:java` ou, dentro de `backend`, `.\mvnw.cmd test`.
+`npm run check` executa JUnit, testes da ponte Node/Java e do runtime e os fluxos Electron de cadastro, migração, isolamento, projetos, artes, revisões, referências e recuperação, além da compilação Java/TypeScript. Após empacotar, a suíte pode verificar o portátil real e o executável descompactado, incluindo um fluxo dedicado ao Java incorporado. Sem executável informado, esse fluxo adicional é ignorado explicitamente. Veja [como verificar a distribuição](docs/INSTALACAO.md) e os [resultados de QA](docs/QA.md). Para estudar somente o Java: `npm run test:java` ou, dentro de `backend`, `.\mvnw.cmd test`.
 
 Cobertura da entrega:
 
-- Cadastro e edição de cliente e campanha.
-- Orientações permanentes e de campanha, correção e invalidação preservando o histórico.
+- Cadastro e edição de clientes e projetos, com várias artes por projeto.
+- Modelos reutilizáveis e revisões com preservação, modificação, origem e aprovação.
+- Orientações permanentes e de projeto, correção e invalidação preservando o histórico.
 - Exclusão de decisões antigas do contexto e manutenção das válidas.
 - Edição e persistência do rascunho e cópia para a área de transferência do sistema.
 - Encerramento e nova abertura do Electron com dados e rascunho preservados.
@@ -170,7 +171,7 @@ Cobertura da entrega:
 - Validação de referências órfãs, identificadores duplicados, versões desconhecidas e limite por anexo.
 - Compilação TypeScript e verificação de ausência de rolagem horizontal em janela de 900 × 700.
 - Base 0.1.0 aberta sem regravação e snapshot original comparado byte a byte após editar pelo Java.
-- Separação do contexto por campanha, preservando regras permanentes.
+- Separação do contexto por cliente, projeto e arte, preservando regras permanentes.
 - Inicialização/encerramento do Java, comunicação concorrente, Java ausente e queda do processo.
 - Bloqueio de segundo escritor e proteção contra exportação sobre o arquivo interno.
 

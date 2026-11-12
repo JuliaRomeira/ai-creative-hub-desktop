@@ -1,5 +1,15 @@
 # Estado do projeto
 
+## Evolução Cliente → Projeto → Arte → Revisão — Etapa 6
+
+- `npm run check` final aprovou compilação Java 17/TypeScript/Vite, JUnit 19/19, Node/ponte/runtime 12/12 e Electron 11/11 fluxos aplicáveis; o teste exclusivo do pacote é executado separadamente.
+- `npm run package` gerou localmente instalador NSIS e portátil x64 com o runtime Java reduzido incluído. Nenhum artefato foi publicado ou instalado.
+- O executável descompactado passou o cenário do pacote e o cenário de três revisões (2/2). O portátil real passou o cenário de Java incluído, persistência, reinício e base legada (1/1), com Java externo removido do ambiente do processo.
+- Auditoria das dependências de produção: zero vulnerabilidades. O aplicativo continua sem API, modelo local, conta, porta HTTP ou serviço externo.
+- README, arquitetura, estado e QA refletem o contrato v2, a migração da 0.3.0 e os fluxos implementados.
+- Pendências manuais: validação cotidiana com designer; instalação, reinstalação e desinstalação deste build; SmartScreen; assinatura digital; e teste em outro computador Windows limpo.
+- A etapa está funcionalmente concluída para desenvolvimento e pacote local. As pendências acima impedem chamar o instalador de validado para cliente final ou publicar uma release.
+
 ## Evolução Cliente → Projeto → Arte → Revisão — Etapa 5
 
 - Referências podem ser associadas ao cliente inteiro, a um projeto ou a uma arte. A interface identifica o escopo e o contexto lista somente arquivos aplicáveis à arte selecionada.

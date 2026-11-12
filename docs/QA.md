@@ -1,5 +1,15 @@
 # Relatório de QA — 29/10/2026
 
+## Etapa 6 — verificação final e pacote local — 11/11/2026
+
+- `npm run check`: sucesso. Java 19/19, Node/ponte/runtime 12/12, Electron de desenvolvimento 11/11 aplicáveis e 1 teste do pacote ignorado nessa modalidade.
+- `npm run package`: sucesso. Instalador `AI-Creative-Hub-Setup-0.3.0-x64.exe`, 140.203.324 bytes, SHA-256 `B5373389697275B7D66958C3644FF235442BC2952450352150CFB4AF723D548F`.
+- Portátil `AI-Creative-Hub-Portable-0.3.0-x64.exe`, 128.255.722 bytes, SHA-256 `0BB5232E1008046289220AA022FBD56FB2223E4111164B59367A9B9AF8B57579`.
+- Executável em `release/win-unpacked`: 2/2 fluxos aprovados, cobrindo Java incluído sem Java externo, persistência/reinício, migração legada, referência por arte e três revisões com a segunda aprovada.
+- Portátil real: 1/1 fluxo aprovado em 31,2 s, incluindo extração, runtime incluído, dados fictícios, reinício e recuperação. `PATH` foi restrito, `JAVA_HOME` apontou para caminho inexistente e o teste confirmou o processo Java em `resources/runtime/bin/java.exe`.
+- `npm audit --omit=dev`: zero vulnerabilidades nas dependências de produção.
+- Não executado neste build: instalação/reinstalação/desinstalação NSIS, SmartScreen, assinatura, computador Windows limpo independente e uso real por designer. O instalador e o portátil são artefatos locais de validação, não uma release publicada.
+
 ## Etapa 5 — referências e histórico — 11/11/2026
 
 - Fluxo Electron específico cria referência vinculada à arte, apaga o arquivo de origem, cria três revisões, deriva a terceira da primeira e aprova somente a segunda.
