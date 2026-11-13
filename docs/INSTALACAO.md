@@ -1,14 +1,14 @@
-﻿# Instalação Windows — 0.3.0
+﻿# Instalação Windows — 0.4.0
 
 ## Para usar
 
 1. Abra a [página de versões](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases) e escolha a versão aprovada.
-2. Baixe `AI-Creative-Hub-Setup-0.3.0-x64.exe` para Windows 10/11 x64.
+2. Baixe `AI-Creative-Hub-Setup-0.4.0-x64.exe` para Windows 10/11 x64.
 3. Execute o arquivo. Abra **AI Creative Hub** pelo atalho na área de trabalho ou no menu Iniciar.
 
 Java, Node.js e Maven não precisam ser instalados. Não configure PATH ou JAVA_HOME. Depois de baixar o pacote, a instalação e o uso não precisam de internet, conta ou API.
 
-Para usar sem instalação, abra `AI-Creative-Hub-Portable-0.3.0-x64.exe`. O portátil também inclui Java. Os dois formatos usam os dados no perfil do Windows, não ao lado do executável.
+Para usar sem instalação, abra `AI-Creative-Hub-Portable-0.4.0-x64.exe`. O portátil também inclui Java. Os dois formatos usam os dados no perfil do Windows, não ao lado do executável.
 
 O programa não tem assinatura digital. O Windows pode mostrar aviso de editor desconhecido/SmartScreen; computadores de empresas podem impedir a execução por política interna. Não há atualizador automático.
 
@@ -39,7 +39,7 @@ Para atualizar o runtime, revise a publicação oficial da Adoptium e altere ver
 Testar o **portátil real**, sem Java acessível ao aplicativo:
 
 ```powershell
-$env:AICH_EXECUTABLE = (Resolve-Path 'release/AI-Creative-Hub-Portable-0.3.0-x64.exe').Path
+$env:AICH_EXECUTABLE = (Resolve-Path 'release/AI-Creative-Hub-Portable-0.4.0-x64.exe').Path
 try { npx playwright test } finally { Remove-Item Env:AICH_EXECUTABLE }
 ```
 

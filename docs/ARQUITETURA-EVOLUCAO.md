@@ -2,7 +2,7 @@
 
 ## Objetivo e limite desta etapa
 
-Este documento registra a análise e a proposta para evoluir o AI Creative Hub Desktop a partir da versão 0.3.0. A estrutura descrita abaixo ainda não está implementada. A implementação deve continuar local, determinística e funcional sem internet, API paga ou modelo de IA instalado.
+Este documento registra a análise e a arquitetura implementada para evoluir o AI Creative Hub Desktop a partir da versão 0.3.0. A versão 0.4.0 mantém o funcionamento local, determinístico e sem internet, API paga ou modelo de IA instalado.
 
 Neste plano, **gerar contexto** significa montar um texto completo e copiável com regras explícitas. O aplicativo não gera a imagem final nem o texto criativo por conta própria, pois isso exigiria um mecanismo de geração que está fora das restrições atuais.
 

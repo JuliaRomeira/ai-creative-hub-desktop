@@ -2,7 +2,7 @@
 
 **Em desenvolvimento — primeira versão funcional**
 
-Versão **0.3.0**: back-end Java 17, React/TypeScript e Electron, com instalador e portátil Windows e runtime Java reduzido com jlink. A publicação estável depende das verificações obrigatórias descritas abaixo.
+Versão **0.4.0**: back-end Java 17, React/TypeScript e Electron, com instalador e portátil Windows e runtime Java reduzido com jlink.
 
 Um espaço local para organizar clientes, projetos, artes, revisões, referências e decisões e preparar um contexto consistente para usar em diferentes ferramentas de IA.
 
@@ -50,11 +50,11 @@ O rascunho é uma versão revisada manualmente: mudanças na marca ou nas decis�
 
 ## Baixar para Windows
 
-Na [página de versões](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases), procure a versão aprovada e baixe **`AI-Creative-Hub-Setup-0.3.0-x64.exe`**. A 0.3.0 só será publicada como estável após as verificações obrigatórias. O pacote inclui interface, back-end e Java próprio: não precisa instalar Java, Node.js, Maven ou configurar variáveis de ambiente. A instalação e o uso não baixam dependências.
+Na [página de versões](https://github.com/JuliaRomeira/ai-creative-hub-desktop/releases), procure a versão aprovada e baixe **`AI-Creative-Hub-Setup-0.4.0-x64.exe`**. O pacote inclui interface, back-end e Java próprio: não precisa instalar Java, Node.js, Maven ou configurar variáveis de ambiente. A instalação e o uso não baixam dependências.
 
 Execute o instalador no **Windows 10/11 de 64 bits (x64)**. Ele instala para o usuário atual e cria atalhos na área de trabalho e no menu Iniciar. Abra o aplicativo pelo atalho. Dados e backups ficam no perfil do Windows e são preservados na atualização e na desinstalação normal.
 
-Para usar sem instalar, baixe **`AI-Creative-Hub-Portable-0.3.0-x64.exe`** e abra o arquivo. O portátil também inclui Java e salva os dados no perfil do Windows; não leva a base junto ao copiar somente o executável.
+Para usar sem instalar, baixe **`AI-Creative-Hub-Portable-0.4.0-x64.exe`** e abra o arquivo. O portátil também inclui Java e salva os dados no perfil do Windows; não leva a base junto ao copiar somente o executável.
 
 Para atualizar: clique em **Exportar backup**, guarde o JSON fora do computador e feche a versão anterior. Execute o instalador novo ou substitua o portátil. Para recuperar uma base em outro computador, use **Restaurar backup**; a restauração substitui os dados atuais, mantendo uma cópia de recuperação local.
 
@@ -186,7 +186,7 @@ As capturas em `docs/` são geradas pelo próprio teste. Bancos, backups, depend
 - PDFs não têm visualizador embutido. Use **Salvar cópia** e abra no leitor de PDF.
 - Armazenamento JSON com anexos em memória durante o uso, adequado a projetos pequenos dentro dos limites acima.
 - Instalador Windows x64 sem assinatura; macOS, Linux e Windows ARM64 não foram validados.
-- O Java acompanha os dois pacotes 0.3.0; execução pelo código-fonte continua exigindo JDK instalado. Consulte o relatório de QA para o alcance do teste Windows sem Java externo.
+- O Java acompanha os dois pacotes 0.4.0; execução pelo código-fonte continua exigindo JDK instalado. Consulte o relatório de QA para o alcance do teste Windows sem Java externo.
 - Bibliotecas grandes de mídia e uso prolongado com base próxima do limite ainda não foram validados. A JVM tem limite de heap de 512 MB e o armazenamento atual mantém o documento em memória.
 
 ### Roadmap — ainda não implementado
