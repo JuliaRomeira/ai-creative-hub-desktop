@@ -52,6 +52,7 @@ test("Resposta de contexto pendente não permite misturar clientes ou perder edi
     await page
       .getByRole("button", { name: "Atualizar com dados atuais" })
       .click();
+    await expect(page.getByRole("status")).toHaveText("Processando…");
     const other = page.getByRole("button", { name: /Outro cliente fictício/ });
     // Exercita a falha também quando a navegação ainda está liberada.
     if (await other.isEnabled()) {
@@ -86,12 +87,18 @@ test("Resposta de contexto pendente não permite misturar clientes ou perder edi
     const persisted = JSON.parse(
       fs.readFileSync(path.join(directory, "workspace.json"), "utf8"),
     );
-    expect(persisted.campaigns.find((c) => c.clientId === otherId).draft).toBe(
-      "Rascunho exclusivo B",
-    );
-    expect(persisted.campaigns.find((c) => c.clientId !== otherId).draft).toBe(
-      "CONTEXTO EXCLUSIVO A",
-    );
+    const contextFor = (project) => {
+      const art = persisted.arts.find((item) => item.projectId === project.id);
+      return persisted.revisions
+        .filter((item) => item.artId === art.id)
+        .sort((a, b) => b.sequence - a.sequence)[0].generatedContext;
+    };
+    expect(
+      contextFor(persisted.projects.find((p) => p.clientId === otherId)),
+    ).toBe("Rascunho exclusivo B");
+    expect(
+      contextFor(persisted.projects.find((p) => p.clientId !== otherId)),
+    ).toBe("CONTEXTO EXCLUSIVO A");
   } finally {
     await app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows().forEach((window) => window.destroy()),

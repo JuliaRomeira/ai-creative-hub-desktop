@@ -60,9 +60,9 @@ test("Aplicativo empacotado usa Java incluído e preserva dados sem Java externo
     expect(
       fs.readFileSync(path.join(workspace, "workspace.json.before-java-v020")),
     ).toEqual(original);
-    await page.getByRole("button", { name: "Nova campanha" }).click();
+    await page.getByRole("button", { name: "Novo projeto" }).click();
     await page
-      .getByLabel("Título da campanha", { exact: true })
+      .getByLabel("Nome do projeto", { exact: true })
       .fill("Campanha runtime incluído");
     await page.getByRole("button", { name: "Salvar", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);

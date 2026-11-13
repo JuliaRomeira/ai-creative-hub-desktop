@@ -1,3 +1,4 @@
+export type ContextOutput = "art" | "script" | "image-prompt" | "context";
 export interface Client {
   id: string;
   name: string;
@@ -18,10 +19,46 @@ export interface Campaign {
   status: "Rascunho" | "Em andamento" | "Aprovada" | "Concluída";
   draft: string;
 }
+export interface Project {
+  id: string;
+  clientId: string;
+  title: string;
+  objective: string;
+  audience: string;
+  status: Campaign["status"];
+}
+export interface Art {
+  id: string;
+  projectId: string;
+  title: string;
+  format: string;
+  briefing: string;
+  templateId: string | null;
+  templateName: string;
+  templateInstructions: string;
+}
+export interface Revision {
+  id: string;
+  artId: string;
+  sequence: number;
+  sourceRevisionId: string | null;
+  instructions: string;
+  preserveElements: string[];
+  modifyElements: string[];
+  generatedContext: string;
+  createdAt: string | null;
+  approvedAt: string | null;
+}
+export interface ArtTemplate {
+  id: string;
+  name: string;
+  format: string;
+  instructions: string;
+}
 export interface Decision {
   id: string;
   clientId: string;
-  campaignId: string | null;
+  projectId: string | null;
   text: string;
   createdAt: string;
   invalidatedAt: string | null;
@@ -31,15 +68,20 @@ export interface Decision {
 export interface Reference {
   id: string;
   clientId: string;
+  projectId: string | null;
+  artId: string | null;
   name: string;
   mime: string;
   data: string;
   createdAt: string;
 }
 export interface Workspace {
-  version: 1;
+  version: 2;
   clients: Client[];
-  campaigns: Campaign[];
+  projects: Project[];
+  arts: Art[];
+  revisions: Revision[];
+  templates: ArtTemplate[];
   decisions: Decision[];
   references: Reference[];
 }
@@ -48,8 +90,18 @@ declare global {
     hub: {
       read(): Promise<Workspace>;
       update(type: string, input: unknown): Promise<Workspace>;
-      context(clientId: string, campaignId: string): Promise<string>;
-      attach(id: string): Promise<Workspace | null>;
+      context(
+        clientId: string,
+        campaignId: string,
+        artId: string,
+        revisionId: string | null,
+        output?: ContextOutput,
+      ): Promise<string>;
+      attach(
+        clientId: string,
+        projectId?: string | null,
+        artId?: string | null,
+      ): Promise<Workspace | null>;
       saveReference(id: string): Promise<boolean>;
       copy(text: string): Promise<boolean>;
       export(): Promise<boolean>;

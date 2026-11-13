@@ -1,12 +1,17 @@
 package io.github.juliaromeira.creativehub.model;
 
-/** campaignId nulo significa regra permanente do cliente. */
+/** projectId nulo significa regra permanente do cliente. */
 public record Decision(
     String id,
     String clientId,
-    String campaignId,
+    String projectId,
     String text,
     String createdAt,
     String invalidatedAt,
     String reason,
-    String replaces) {}
+    String replaces) {
+  /** Compatibilidade temporária com os chamadores v1. */
+  public String campaignId() {
+    return projectId;
+  }
+}

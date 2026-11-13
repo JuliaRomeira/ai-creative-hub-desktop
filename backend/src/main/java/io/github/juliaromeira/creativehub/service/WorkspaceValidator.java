@@ -10,74 +10,151 @@ public final class WorkspaceValidator {
   public static final int MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
   public static final Set<String> MIME_TYPES =
       Set.of("image/png", "image/jpeg", "image/webp", "application/pdf");
+  private static final Set<String> STATUSES =
+      Set.of("Rascunho", "Em andamento", "Aprovada", "Concluída");
 
   public void validate(Workspace data) {
-    require(data != null && data.version() == 1, "Versão de dados não suportada.");
+    require(data != null && data.version() == 2, "Versão de dados não suportada.");
     size(data.clients(), 1000);
-    size(data.campaigns(), 10000);
+    size(data.projects(), 10000);
+    size(data.arts(), 20000);
+    size(data.revisions(), 50000);
+    size(data.templates(), 10000);
     size(data.decisions(), 20000);
     size(data.references(), 1000);
+
     Set<String> allIds = new HashSet<>();
-    Set<String> clients = new HashSet<>();
-    Map<String, Campaign> campaigns = new HashMap<>();
+    Map<String, Client> clients = new HashMap<>();
+    Map<String, Project> projects = new HashMap<>();
+    Map<String, Art> arts = new HashMap<>();
+    Map<String, Revision> revisions = new HashMap<>();
     Map<String, Decision> decisions = new HashMap<>();
-    for (Client c : data.clients()) {
-      unique(c.id(), allIds);
-      clients.add(c.id());
-      text(c.name(), true, 20000);
+    Map<String, Template> templates = new HashMap<>();
+
+    for (Client client : data.clients()) {
+      unique(client.id(), allIds);
+      clients.put(client.id(), client);
+      text(client.name(), true, 20000);
       for (String value :
-          new String[] {c.description(), c.audience(), c.tone(), c.colors(), c.guidelines()})
-        text(value, false, 20000);
+          new String[] {
+            client.description(), client.audience(), client.tone(), client.colors(), client.guidelines()
+          }) text(value, false, 20000);
     }
-    for (Campaign c : data.campaigns()) {
-      unique(c.id(), allIds);
-      require(clients.contains(c.clientId()), "Cliente da campanha não existe.");
-      campaigns.put(c.id(), c);
-      text(c.title(), true, 20000);
-      for (String value : new String[] {c.objective(), c.audience(), c.format(), c.request()})
-        text(value, false, 20000);
-      text(c.draft(), false, 200000);
+    for (Project project : data.projects()) {
+      unique(project.id(), allIds);
+      require(clients.containsKey(project.clientId()), "Cliente do projeto não existe.");
+      projects.put(project.id(), project);
+      text(project.title(), true, 20000);
+      text(project.objective(), false, 20000);
+      text(project.audience(), false, 20000);
+      require(project.status() != null && STATUSES.contains(project.status()), "Status inválido.");
+    }
+    for (Template template : data.templates()) {
+      unique(template.id(), allIds);
+      templates.put(template.id(), template);
+      text(template.name(), true, 20000);
+      text(template.format(), false, 20000);
+      text(template.instructions(), false, 20000);
+    }
+    for (Art art : data.arts()) {
+      unique(art.id(), allIds);
+      require(projects.containsKey(art.projectId()), "Projeto da arte não existe.");
+      if (art.templateId() != null)
+        require(templates.containsKey(art.templateId()), "Modelo de origem da arte não existe.");
+      arts.put(art.id(), art);
+      text(art.title(), true, 20000);
+      text(art.format(), false, 20000);
+      text(art.briefing(), false, 20000);
+      text(art.templateName(), false, 20000);
+      text(art.templateInstructions(), false, 20000);
+    }
+
+    Map<String, Set<Integer>> sequences = new HashMap<>();
+    for (Revision revision : data.revisions()) {
+      unique(revision.id(), allIds);
+      require(arts.containsKey(revision.artId()), "Arte da revisão não existe.");
+      require(revision.sequence() > 0, "Sequência de revisão inválida.");
       require(
-          c.status() != null
-              && Set.of("Rascunho", "Em andamento", "Aprovada", "Concluída").contains(c.status()),
-          "Status inválido.");
-    }
-    for (Decision d : data.decisions()) {
-      unique(d.id(), allIds);
-      require(clients.contains(d.clientId()), "Cliente da orientação não existe.");
-      decisions.put(d.id(), d);
-      text(d.text(), true, 20000);
-      text(d.reason(), false, 20000);
-      date(d.createdAt());
-      if (d.invalidatedAt() != null) date(d.invalidatedAt());
-      if (d.campaignId() != null)
+          sequences.computeIfAbsent(revision.artId(), ignored -> new HashSet<>()).add(revision.sequence()),
+          "Sequência de revisão duplicada.");
+      revisions.put(revision.id(), revision);
+      text(revision.instructions(), false, 20000);
+      strings(revision.preserveElements(), 100);
+      strings(revision.modifyElements(), 100);
+      text(revision.generatedContext(), false, 200000);
+      if (revision.createdAt() != null) date(revision.createdAt());
+      else {
+        Art art = arts.get(revision.artId());
         require(
-            campaigns.containsKey(d.campaignId())
-                && campaigns.get(d.campaignId()).clientId().equals(d.clientId()),
-            "Campanha da orientação inválida.");
+            revision.sequence() == 1
+                && revision.sourceRevisionId() == null
+                && revision.id().equals(Workspace.migratedId("revision", art.projectId()))
+                && art.id().equals(Workspace.migratedId("art", art.projectId())),
+            "Data da revisão ausente.");
+      }
+      if (revision.approvedAt() != null) date(revision.approvedAt());
     }
-    for (Decision d : data.decisions()) {
-      if (d.replaces() == null) continue;
-      Decision old = decisions.get(d.replaces());
+    for (Map.Entry<String, Set<Integer>> entry : sequences.entrySet())
+      for (int sequence = 1; sequence <= entry.getValue().size(); sequence++)
+        require(entry.getValue().contains(sequence), "Sequência de revisão incompleta.");
+    for (Revision revision : data.revisions()) {
+      if (revision.sourceRevisionId() == null) continue;
+      Revision source = revisions.get(revision.sourceRevisionId());
+      require(
+          source != null
+              && source.artId().equals(revision.artId())
+              && source.sequence() < revision.sequence(),
+          "Origem da revisão inválida.");
+    }
+
+    for (Decision decision : data.decisions()) {
+      unique(decision.id(), allIds);
+      require(clients.containsKey(decision.clientId()), "Cliente da orientação não existe.");
+      if (decision.projectId() != null)
+        require(
+            projects.containsKey(decision.projectId())
+                && projects.get(decision.projectId()).clientId().equals(decision.clientId()),
+            "Projeto da orientação inválido.");
+      decisions.put(decision.id(), decision);
+      text(decision.text(), true, 20000);
+      text(decision.reason(), false, 20000);
+      date(decision.createdAt());
+      if (decision.invalidatedAt() != null) date(decision.invalidatedAt());
+    }
+    for (Decision decision : data.decisions()) {
+      if (decision.replaces() == null) continue;
+      Decision old = decisions.get(decision.replaces());
       require(
           old != null
-              && !old.id().equals(d.id())
+              && !old.id().equals(decision.id())
               && old.invalidatedAt() != null
-              && old.clientId().equals(d.clientId())
-              && Objects.equals(old.campaignId(), d.campaignId()),
+              && old.clientId().equals(decision.clientId())
+              && Objects.equals(old.projectId(), decision.projectId()),
           "Histórico de correção inválido.");
     }
-    for (Reference r : data.references()) {
-      unique(r.id(), allIds);
-      require(clients.contains(r.clientId()), "Cliente da referência não existe.");
-      text(r.name(), true, 255);
-      date(r.createdAt());
-      require(r.mime() != null && MIME_TYPES.contains(r.mime()), "Tipo de referência inválido.");
-      text(r.data(), false, 14000000);
+    for (Reference reference : data.references()) {
+      unique(reference.id(), allIds);
+      require(clients.containsKey(reference.clientId()), "Cliente da referência não existe.");
+      Project project = reference.projectId() == null ? null : projects.get(reference.projectId());
+      require(
+          reference.projectId() == null
+              || (project != null && project.clientId().equals(reference.clientId())),
+          "Projeto da referência inválido.");
+      Art art = reference.artId() == null ? null : arts.get(reference.artId());
+      require(
+          reference.artId() == null
+              || (project != null && art != null && art.projectId().equals(project.id())),
+          "Arte da referência inválida.");
+      text(reference.name(), true, 255);
+      date(reference.createdAt());
+      require(
+          reference.mime() != null && MIME_TYPES.contains(reference.mime()),
+          "Tipo de referência inválido.");
+      text(reference.data(), false, 14000000);
       byte[] bytes;
       try {
-        bytes = Base64.getDecoder().decode(r.data());
-      } catch (IllegalArgumentException e) {
+        bytes = Base64.getDecoder().decode(reference.data());
+      } catch (IllegalArgumentException error) {
         throw new IllegalArgumentException("Conteúdo do anexo inválido.");
       }
       require(bytes.length <= MAX_ATTACHMENT_BYTES, "Cada referência pode ter até 10 MB.");
@@ -92,6 +169,11 @@ public final class WorkspaceValidator {
 
   public static void require(boolean valid, String message) {
     if (!valid) throw new IllegalArgumentException(message);
+  }
+
+  private static void strings(List<String> values, int max) {
+    size(values, max);
+    for (String value : values) text(value, true, 20000);
   }
 
   private static void size(List<?> list, int max) {
@@ -110,7 +192,7 @@ public final class WorkspaceValidator {
   private static void date(String value) {
     try {
       Instant.parse(value);
-    } catch (Exception e) {
+    } catch (Exception error) {
       throw new IllegalArgumentException("Data inválida.");
     }
   }

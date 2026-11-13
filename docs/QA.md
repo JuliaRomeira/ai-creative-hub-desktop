@@ -1,5 +1,52 @@
 # Relatório de QA — 29/10/2026
 
+## Etapa 6 — verificação final e pacote local — 12/11/2026
+
+- `npm run check`: sucesso. Java 19/19, Node/ponte/runtime 12/12, Electron de desenvolvimento 11/11 aplicáveis e 1 teste do pacote ignorado nessa modalidade.
+- `npm run package`: sucesso. Instalador `AI-Creative-Hub-Setup-0.4.0-x64.exe`, 140.203.123 bytes, SHA-256 `90736235030CB6D05257A417350D6DD6C87F86D39F36E8207F0B294AB99855AD`.
+- Portátil `AI-Creative-Hub-Portable-0.4.0-x64.exe`, 128.255.990 bytes, SHA-256 `D27581EC9899EDB78E223BFE30C600B1C36C1CD4AEA02EC47509C745CEDC4D11`.
+- Executável em `release/win-unpacked`: 2/2 fluxos aprovados, cobrindo Java incluído sem Java externo, persistência/reinício, migração legada, referência por arte e três revisões com a segunda aprovada.
+- Portátil real: 1/1 fluxo aprovado em 33,0 s, incluindo extração, runtime incluído, dados fictícios, reinício e recuperação. `PATH` foi restrito, `JAVA_HOME` apontou para caminho inexistente e o teste confirmou o processo Java em `resources/runtime/bin/java.exe`.
+- `npm audit --omit=dev`: zero vulnerabilidades nas dependências de produção.
+- Não executado neste build: instalação/reinstalação/desinstalação NSIS, SmartScreen, assinatura, computador Windows limpo independente e uso real por designer. O instalador e o portátil são artefatos locais de validação, não uma release publicada.
+
+## Etapa 5 — referências e histórico — 11/11/2026
+
+- Fluxo Electron específico cria referência vinculada à arte, apaga o arquivo de origem, cria três revisões, deriva a terceira da primeira e aprova somente a segunda.
+- Depois de encerrar e reabrir o aplicativo, as revisões 1, 2 e 3 continuam visíveis, a revisão 2 mantém `approvedAt`, e instruções, elementos preservados e modificados permanecem identificados.
+- A imagem incorporada continua visível e o JSON confirma os relacionamentos `clientId`, `projectId` e `artId`. A validação Java existente rejeita relações órfãs antes de salvar.
+- O painel de contexto filtra a lista de anexos pelo projeto e arte selecionados, evitando sugerir manualmente uma referência de outro trabalho do mesmo cliente.
+- `npm run check` aprovado: JUnit 19/19, Node/ponte/runtime 12/12 e Electron 11/11 aplicáveis; 1 teste exclusivo do executável empacotado ignorado nesta execução de desenvolvimento.
+- Dados fictícios em perfil temporário; nenhum arquivo ou base pessoal foi usado.
+
+## Etapa 4 — interface e experiência — 11/11/2026
+
+- Novo fluxo Electron cobre cliente → projeto → modelo → arte → revisão → contexto → rascunho, usando Java e armazenamento reais em perfil temporário fictício.
+- Janela testada em 850 × 650, o mínimo aceito pelo aplicativo, sem rolagem horizontal. Os testes anteriores mantêm cobertura em 900 × 700 e tamanhos maiores usados nas capturas.
+- Teste de teclado confirmou fechamento por `Esc`, foco preso no modal e retorno ao botão de origem. A primeira execução revelou que o foco voltava ao campo com `autoFocus`; o estado passou a guardar explicitamente o controle de origem e o reteste foi aprovado.
+- O teste de isolamento também confirma indicador `Processando…`, campos e navegação desabilitados durante uma resposta pendente e ausência de mistura entre clientes.
+- A aplicação desktop não suporta viewport móvel abaixo de 850 px por decisão já existente da janela Electron; não foi feita uma versão móvel ou um redesign.
+- `npm run check` final aprovado: JUnit 19/19, Node/ponte/runtime 12/12 e Electron 10/10 aplicáveis; 1 caso exclusivo do executável empacotado foi ignorado. Para eliminar a corrida de limpeza observada no `%TEMP%` do Windows sem ocultar testes, o Surefire passou a criar temporários dentro da pasta descartável `backend/target`.
+- Validação de uso real por designer: **pendente**. Os testes automatizados não substituem observação de uma pessoa usando o produto no trabalho diário.
+
+## Etapa 3 — contexto e controle de alterações — 11/11/2026
+
+- JUnit: 19/19 aprovados. Os quatro testes de prompt cobrem compatibilidade anterior, tipos de entrega, isolamento, composição Cliente → Projeto → Arte → Revisão, preservação dos dados e conflitos com elementos protegidos.
+- Node/ponte Java: 12/12 aprovados, mantendo comunicação, persistência, runtime e recuperação.
+- Electron/Playwright: 9/9 fluxos aplicáveis aprovados e 1 teste do executável empacotado ignorado, como esperado sem um novo pacote. A primeira execução revelou regressão na orientação sobre instrução antiga de entrega; a frase obrigatória foi restaurada e o teste direcionado passou antes da suíte completa.
+- Duas tentativas agregadas de `npm run check` pararam na limpeza de pastas temporárias pelo JUnit no Windows (`DirectoryNotEmptyException`), em testes diferentes e depois de todas as asserções. A repetição isolada do Java passou 19/19; Node e Electron foram executados separadamente. O incidente é classificado como falha intermitente de limpeza do ambiente, não como aprovação de uma execução agregada limpa.
+- Cenário crítico fictício: publicação Instagram, revisão para trocar apenas a imagem principal, preservando cores, logotipo e tipografia. O resultado inclui marca, modelo, briefing, revisão, decisão e referência corretos e exclui marcadores de outro projeto e cliente.
+- Dados exclusivamente fictícios e diretórios temporários. Nenhuma base pessoal, serviço externo, instalação ou executável publicado foi usado.
+- Validação prática com uma designer permanece pendente; a Etapa 4 deve registrá-la como pendência se não for realizada.
+
+## Etapa 2 — estrutura e persistência v2 — 10/11/2026
+
+- JUnit: 17/17 aprovados. Quatro testes específicos cobrem migração v1 sem escrita na leitura, snapshot byte a byte, IDs determinísticos, múltiplos projetos/artes, snapshot de modelo, duplicação, revisões derivadas, aprovação, relações inválidas, falha sem gravação parcial e backup/restauração v1/v2.
+- Node/ponte Java: 12/12 aprovados, incluindo criação de projeto, modelo, arte e duas revisões, encerramento do Java, reabertura e recuperação do JSON v2.
+- Electron/Playwright: fluxo v2 cria dados pela interface real, reinicia e confirma projeto, modelo, duas artes, duas revisões e aprovação. A regressão existente também valida base legada, isolamento, recuperação do Java, anexos e contexto.
+- Dados exclusivamente fictícios em diretórios temporários. Nenhuma base pessoal, instalação ou executável publicado foi alterado.
+- A validação de uso cotidiano por designer permanece pendente; empacotamento, instalador e SmartScreen pertencem à etapa final.
+
 ## Método e isolamento
 - Agentes separados: QA escreve testes, desenvolvedor altera aplicação, coordenador mantém documentação.
 - Dados fictícios em diretórios temporários; nenhuma base pessoal usada.
@@ -67,3 +114,25 @@
 - CI com Java externo fisicamente removido: portátil5/5 passou. Instalação NSIS retornou0 e criou o executável, mas o teste procurava DisplayName sem versão; confirmado no código do electron-builder que o padrão inclui produto+versão. Corrigida descoberta com regex ancorada para produto e versões semver, mantendo Count1 e DisplayVersion obrigatórios e adicionando diagnóstico dos registros encontrados. Oito registros fictícios verificaram descoberta e rejeição de nomes não relacionados; nenhum registro real foi alterado localmente. Novo CI obrigatório repetirá todo o ciclo.
 - A primeira travessia C# também mostrou demora no runner. Corrigida para uma única DirectoryInfo.EnumerateFileSystemInfos por diretório e atributos em cache, mantendo os mesmos alvos e exclusão apenas de junctions de diretórios. Benchmark local delimitado em C:\Windows\Microsoft.NET, cinco medições alternadas: média282,68ms anterior versus131,10ms nova, resultados idênticos. Essa medição não comprova o tempo no volume completo do runner. Node10/10 passou após o ajuste; CI completo será repetido.
 - CI reconheceu um layout adicional do Java8: jdk/jre/bin/java.exe sem release próprio. A seleção da raiz agora promove somente esse JRE para o JDK pai quando o pai tem JAVA_VERSION válido; todas as proteções de caminho e verificação posterior continuam ativas. Fixtures verificaram JDK8 aninhado, JRE independente e metadados inválidos, sem excluir arquivos. Dois testes de inventário passaram; suíte Node agora contém11 testes.
+
+## Recuperação do Java — 04/11/2026
+- Reprodução independente antes da correção, em perfil temporário: leitura inicial funcionou; editar contexto e cancelar `app.quit()` preservou a janela, mas a leitura seguinte falhou com Java indisponível. Gravidade: bloqueio de uso até reabrir, com rascunho ainda na janela.
+- Correção: encerrar Java somente em `will-quit`; reconectar na operação seguinte após queda, aguardando liberação do processo anterior; não repetir pedidos sem confirmação.
+- `npm run check`: JUnit 11/11, Node 11/11 e compilação aprovados. Dois testes novos inicialmente falharam por `require` indisponível no contexto de avaliação do Playwright; corrigido exclusivamente o carregamento do módulo do teste com `createRequire`.
+- Após correção do teste, `npx playwright test`: 7 aprovados e 1 ignorado (exclusivo de executável empacotado). `tests/recovery.e2e.cjs`: 3/3 aprovados. Cancelar saída mantém a instância Java original viva; queda permite próxima edição sem reabrir; mutação interrompida mostra aviso e não sofre replay; pedidos concorrentes iniciam apenas um Java substituto. Clientes, campanhas, decisões e referências legadas fictícias preservados.
+- Testes usam diretórios temporários; não alteram a instalação nem a base pessoal. O teste de symlink de arquivo requer privilégios indisponíveis; cobertura de junction permanece ativa.
+- Causa exata do incidente original não comprovada; não atribuir a captura ao bug reproduzido sem evidência adicional.
+- Artefatos locais gerados em `release-validation/java-recovery/`: instalador NSIS e portátil 0.3.0 corrigidos (não são a release publicada). A interrupção da sessão ocorreu durante a criação do portátil; a etapa foi retomada com `npx electron-builder --win portable --x64 --publish never --prepackaged release-validation/java-recovery/win-unpacked --config.directories.output=release-validation/java-recovery`.
+- Portátil real: `AICH_EXECUTABLE` apontando o executável acima + `npx playwright test`: **8/8 aprovados**, sem ignorados, em 1,7 min. PATH sem Java e JAVA_HOME inexistente apenas no processo de teste; Java externo não foi removido do computador. Validado runtime incluído também na instância recriada após queda.
+- SHA-256 portátil: `d020af59803b110255313985b47aeafaf160c4f1292e3465a2f58ebce717336f`; instalador: `ddcab393d35510f29db8bce03262a302887d2389659d2003b5ff5265f0661914`. Manifesto local `SHA256SUMS.txt` junto aos executáveis.
+- Não realizado nesta correção: instalar/reinstalar/desinstalar NSIS, SmartScreen, assinatura digital ou computador final. A instalação pessoal não foi substituída e uma nova release não foi criada.
+
+## Prompt orientado ao resultado — 05/11/2026
+- JUnit: 13/13. Inclui compatibilidade do contexto legado, quatro tipos de resultado, rejeição de modo inválido, isolamento entre clientes/campanhas, decisões invalidadas ausentes e nenhuma mutação dos dados durante a preparação.
+- `npm run check`: Node 11/11, compilação Java/TypeScript/Vite aprovada e Electron 8/8 aplicáveis; o caso exclusivo do empacotado foi ignorado porque esta etapa ainda usava o build de desenvolvimento.
+- O novo fluxo Electron confirma que trocar o resultado desejado não sobrescreve o rascunho; atualizar para arte final inclui pedido de imagem pronta e resolução de instrução antiga conflitante; roteiro gera instrução própria; valor inválido é rejeitado no Java.
+- A demonstração fictícia Café Aurora foi refeita em perfil isolado. O prompt começa com `TAREFA PARA A IA` e pede a arte final, embora o pedido antigo ainda contenha `Não gere a imagem nesta etapa`; o bloco `COMO USAR O BRIEFING` define que a escolha atual substitui somente essa instrução antiga.
+- Portátil real `release-validation/prompt-output/AI-Creative-Hub-Portable-0.3.0-x64.exe`: Playwright **9/9**, sem ignorados, em 2,6 min. O processo de teste remove PATH/JAVA_HOME externos e confirmou o runtime incluído também após reconexão. SHA-256: `56226877e13b686f2c61b04686a75d22d1da52aea462ba64c91cb395a79bf093`.
+- Revisão final em 08/11/2026: chamada sem `output` continua produzindo o contexto legado; seletor acessível por teclado e sem rolagem horizontal na largura mínima de 850 px. JUnit 13/13, build e teste direcionado 1/1 aprovados.
+- Portátil final desta alteração: `release-validation/prompt-final/AI-Creative-Hub-Portable-0.3.0-x64.exe`, 128.235.884 bytes, SHA-256 `cf02ce697061591fbd93e146dc030d1f53e16c6497af26eb0a50b90341226088`. No artefato exato, os testes de Java incluído/dados e prompt passaram 2/2 com Java externo indisponível no processo.
+- Não verificado nesta mudança: instalação/reinstalação/desinstalação NSIS, SmartScreen, assinatura digital e computador final. Nenhum dado pessoal foi usado e a instalação existente não foi substituída.

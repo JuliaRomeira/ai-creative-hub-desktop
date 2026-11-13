@@ -1,6 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { Client, Campaign, Decision, Workspace } from "./types";
+import type {
+  Client,
+  Campaign,
+  Decision,
+  Workspace,
+  ContextOutput,
+  Art,
+  ArtTemplate,
+  Revision,
+} from "./types";
 import "./style.css";
 
 const clientFields = {
@@ -12,13 +21,26 @@ const clientFields = {
   guidelines: "Orientações da marca",
 };
 const campaignFields = {
-  title: "Título da campanha",
+  title: "Nome do projeto",
   objective: "Objetivo",
-  audience: "Público da campanha",
+  audience: "Público do projeto",
   format: "Formato",
   request: "Pedido atual",
 };
 const date = (value: string) => new Date(value).toLocaleString("pt-BR");
+const campaignsFrom = (data?: Workspace): Campaign[] =>
+  data?.projects.map((project) => {
+    const art = data.arts.find((item) => item.projectId === project.id);
+    const revision = data.revisions
+      .filter((item) => item.artId === art?.id)
+      .sort((a, b) => b.sequence - a.sequence)[0];
+    return {
+      ...project,
+      format: art?.format || "",
+      request: art?.briefing || "",
+      draft: revision?.generatedContext || "",
+    };
+  }) || [];
 type Modal =
   | { kind: "client"; value: Client }
   | { kind: "campaign"; value: Campaign }
@@ -33,13 +55,49 @@ function App() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState("");
+  const [contextOutput, setContextOutput] = useState<ContextOutput>("art");
+  const [contextArtId, setContextArtId] = useState("");
+  const [contextRevisionId, setContextRevisionId] = useState("");
+  const [referenceProjectId, setReferenceProjectId] = useState("");
+  const [referenceArtId, setReferenceArtId] = useState("");
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<string>();
   const [search, setSearch] = useState("");
+  const dialogOpener = useRef<HTMLElement | null>(null);
+  const campaigns = campaignsFrom(data);
   const client = data?.clients.find((c) => c.id === clientId);
-  const campaign = data?.campaigns.find(
+  const campaign = campaigns.find(
     (c) => c.id === campaignId && c.clientId === clientId,
   );
+  const contextArts =
+    data?.arts.filter((item) => item.projectId === campaignId) || [];
+  const contextRevisions =
+    data?.revisions
+      .filter((item) => item.artId === contextArtId)
+      .sort((a, b) => b.sequence - a.sequence) || [];
+  const referenceProjects =
+    data?.projects.filter((item) => item.clientId === clientId) || [];
+  const referenceArts =
+    data?.arts.filter((item) => item.projectId === referenceProjectId) || [];
+  useEffect(() => {
+    setContextOutput("art");
+  }, [clientId, campaignId]);
+  useEffect(() => {
+    setReferenceProjectId(campaignId);
+    setReferenceArtId("");
+  }, [clientId, campaignId]);
+  useEffect(() => {
+    setContextArtId(
+      data?.arts.find((item) => item.projectId === campaignId)?.id || "",
+    );
+  }, [campaignId, data?.arts]);
+  useEffect(() => {
+    setContextRevisionId(
+      data?.revisions
+        .filter((item) => item.artId === contextArtId)
+        .sort((a, b) => b.sequence - a.sequence)[0]?.id || "",
+    );
+  }, [contextArtId, data?.revisions]);
   useEffect(() => {
     window.hub
       .read()
@@ -52,7 +110,6 @@ function App() {
   }, []);
   useEffect(() => {
     if (!modal && !preview) return;
-    const previous = document.activeElement as HTMLElement;
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
     function keys(event: KeyboardEvent) {
       if (event.key === "Escape" && !busy) {
@@ -90,9 +147,13 @@ function App() {
     document.addEventListener("keydown", keys);
     return () => {
       document.removeEventListener("keydown", keys);
-      previous?.focus();
     };
   }, [modal, preview, busy]);
+  useEffect(() => {
+    if (modal || preview || !dialogOpener.current) return;
+    dialogOpener.current.focus();
+    dialogOpener.current = null;
+  }, [modal, preview]);
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -112,9 +173,16 @@ function App() {
       await fn();
     } catch (e) {
       setError((e as Error).message);
+      window.scrollTo(0, 0);
     } finally {
       setBusy(false);
     }
+  }
+  async function updateStructure(type: string, input: unknown) {
+    await run(async () => {
+      setData(await window.hub.update(type, input));
+      setNotice("Salvo no computador.");
+    });
   }
   function canLeave() {
     if (busy) return false;
@@ -136,13 +204,21 @@ function App() {
     setCampaignId(c.id);
     setDraft(c.draft);
     setDirty(false);
-    setTab("Campanha");
+    setTab("Projeto");
+  }
+  function showModal(value: Modal) {
+    dialogOpener.current = document.activeElement as HTMLElement;
+    setModal(value);
+  }
+  function showPreview(id: string) {
+    dialogOpener.current = document.activeElement as HTMLElement;
+    setPreview(id);
   }
   function newClient() {
     if (!canLeave()) return;
     setDraft(campaign?.draft || "");
     setDirty(false);
-    setModal({
+    showModal({
       kind: "client",
       value: {
         id: crypto.randomUUID(),
@@ -159,7 +235,7 @@ function App() {
     if (!canLeave()) return;
     setDraft(campaign?.draft || "");
     setDirty(false);
-    setModal({
+    showModal({
       kind: "campaign",
       value: {
         id: crypto.randomUUID(),
@@ -184,7 +260,7 @@ function App() {
         next = await window.hub.update(modal.action || "decision", {
           id: modal.value?.id,
           clientId,
-          campaignId: form.get("scope") === "campaign" ? campaignId : null,
+          projectId: form.get("scope") === "project" ? campaignId : null,
           text: String(form.get("text") || "").trim(),
           reason: String(form.get("reason") || "").trim(),
         });
@@ -208,7 +284,7 @@ function App() {
           setCampaignId(input.id);
           setDraft((input as Campaign).draft);
           setDirty(false);
-          setTab("Campanha");
+          setTab("Projeto");
         }
       }
       setData(next);
@@ -219,10 +295,14 @@ function App() {
   const decisions =
     data?.decisions.filter(
       (d) =>
-        d.clientId === clientId &&
-        (!d.campaignId || d.campaignId === campaignId),
+        d.clientId === clientId && (!d.projectId || d.projectId === campaignId),
     ) || [];
   const refs = data?.references.filter((r) => r.clientId === clientId) || [];
+  const contextRefs = refs.filter(
+    (reference) =>
+      (!reference.projectId || reference.projectId === campaignId) &&
+      (!reference.artId || reference.artId === contextArtId),
+  );
   return (
     <div className="app">
       <aside className="sidebar">
@@ -308,7 +388,7 @@ function App() {
           </button>
         </div>
       </aside>
-      <main>
+      <main aria-busy={busy}>
         <header className="topbar">
           <span>
             Seu espaço criativo{" "}
@@ -321,6 +401,11 @@ function App() {
         <div className="content">
           <div aria-live="polite">
             {notice && <p className="notice">{notice}</p>}
+            {busy && (
+              <p className="notice" role="status">
+                Processando…
+              </p>
+            )}
           </div>
           {error && (
             <p role="alert" className="error">
@@ -365,7 +450,7 @@ function App() {
                 </div>
                 <div>
                   <b>02</b>
-                  <h3>Organize a campanha</h3>
+                  <h3>Organize o projeto</h3>
                   <p>Pedidos e decisões com histórico.</p>
                 </div>
                 <div>
@@ -388,7 +473,7 @@ function App() {
                 </div>
                 <button
                   disabled={busy}
-                  onClick={() => setModal({ kind: "client", value: client })}
+                  onClick={() => showModal({ kind: "client", value: client })}
                 >
                   Editar cliente
                 </button>
@@ -398,7 +483,8 @@ function App() {
                   "Visão geral",
                   "Referências",
                   "Decisões",
-                  ...(campaign ? ["Campanha", "Contexto"] : []),
+                  "Modelos e artes",
+                  ...(campaign ? ["Projeto", "Contexto"] : []),
                 ].map((t) => (
                   <button
                     disabled={busy}
@@ -417,7 +503,7 @@ function App() {
                 <>
                   <div className="section-heading">
                     <div>
-                      <h2>Campanhas</h2>
+                      <h2>Projetos</h2>
                       <p>
                         Um objetivo, um pedido e um histórico para cada projeto.
                       </p>
@@ -427,11 +513,11 @@ function App() {
                       disabled={busy}
                       onClick={newCampaign}
                     >
-                      + Nova campanha
+                      + Novo projeto
                     </button>
                   </div>
                   <div className="campaign-grid">
-                    {data.campaigns
+                    {campaigns
                       .filter((c) => c.clientId === clientId)
                       .map((c) => (
                         <button
@@ -443,20 +529,20 @@ function App() {
                           <span className="status">{c.status}</span>
                           <h3>{c.title}</h3>
                           <p>
-                            {c.objective || "Defina o objetivo desta campanha."}
+                            {c.objective || "Defina o objetivo deste projeto."}
                           </p>
                           <footer>
                             {c.format || "Formato não definido"}{" "}
-                            <span>Abrir campanha →</span>
+                            <span>Abrir projeto →</span>
                           </footer>
                         </button>
                       ))}
                   </div>
-                  {!data.campaigns.some((c) => c.clientId === clientId) && (
+                  {!campaigns.some((c) => c.clientId === clientId) && (
                     <div className="empty">
                       <h3>Qual é o próximo projeto?</h3>
                       <p>
-                        Crie a primeira campanha para organizar o pedido deste
+                        Crie o primeiro projeto para organizar o pedido deste
                         cliente.
                       </p>
                     </div>
@@ -493,7 +579,11 @@ function App() {
                       disabled={busy}
                       onClick={() =>
                         run(async () => {
-                          const next = await window.hub.attach(clientId);
+                          const next = await window.hub.attach(
+                            clientId,
+                            referenceProjectId || null,
+                            referenceArtId || null,
+                          );
                           if (next) {
                             setData(next);
                             setNotice(
@@ -506,6 +596,45 @@ function App() {
                       + Adicionar referências
                     </button>
                   </div>
+                  <div className="form-grid">
+                    <label htmlFor="reference-project">
+                      Associar ao projeto
+                      <select
+                        id="reference-project"
+                        disabled={busy}
+                        value={referenceProjectId}
+                        onChange={(event) => {
+                          setReferenceProjectId(event.target.value);
+                          setReferenceArtId("");
+                        }}
+                      >
+                        <option value="">Somente ao cliente</option>
+                        {referenceProjects.map((project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label htmlFor="reference-art">
+                      Associar à arte
+                      <select
+                        id="reference-art"
+                        disabled={busy || !referenceProjectId}
+                        value={referenceArtId}
+                        onChange={(event) =>
+                          setReferenceArtId(event.target.value)
+                        }
+                      >
+                        <option value="">Todas as artes do projeto</option>
+                        {referenceArts.map((art) => (
+                          <option key={art.id} value={art.id}>
+                            {art.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   <div className="reference-grid">
                     {refs.map((r) => (
                       <article className="reference" key={r.id}>
@@ -513,7 +642,7 @@ function App() {
                           <button
                             disabled={busy}
                             className="image-button"
-                            onClick={() => setPreview(r.id)}
+                            onClick={() => showPreview(r.id)}
                             aria-label={`Ampliar ${r.name}`}
                           >
                             <img
@@ -525,6 +654,13 @@ function App() {
                           <div className="pdf">PDF</div>
                         )}
                         <h3>{r.name}</h3>
+                        <small>
+                          {r.artId
+                            ? `Arte: ${data.arts.find((item) => item.id === r.artId)?.title || "não encontrada"}`
+                            : r.projectId
+                              ? `Projeto: ${data.projects.find((item) => item.id === r.projectId)?.title || "não encontrado"}`
+                              : "Referência geral do cliente"}
+                        </small>
                         <small>{date(r.createdAt)}</small>
                         <button
                           disabled={busy}
@@ -553,7 +689,15 @@ function App() {
                   )}
                 </>
               )}
-              {tab === "Campanha" && campaign && (
+              {tab === "Modelos e artes" && (
+                <StructurePanel
+                  data={data}
+                  projectId={campaignId}
+                  busy={busy}
+                  update={updateStructure}
+                />
+              )}
+              {tab === "Projeto" && campaign && (
                 <>
                   <div className="section-heading">
                     <div>
@@ -563,13 +707,13 @@ function App() {
                     <button
                       disabled={busy}
                       onClick={() =>
-                        setModal({
+                        showModal({
                           kind: "campaign",
                           value: { ...campaign, draft },
                         })
                       }
                     >
-                      Editar campanha
+                      Editar projeto
                     </button>
                   </div>
                   <section className="panel">
@@ -595,7 +739,7 @@ function App() {
                       </p>
                     </div>
                     <button
-                      disabled={busy}
+                      disabled={busy || !contextArtId}
                       className="primary"
                       onClick={() => setTab("Contexto")}
                     >
@@ -615,13 +759,13 @@ function App() {
                       <p>
                         {campaign
                           ? `Regras da marca e decisões de “${campaign.title}”.`
-                          : "Regras permanentes da marca. Abra uma campanha para ver suas decisões."}
+                          : "Regras permanentes da marca. Abra um projeto para ver suas decisões."}
                       </p>
                     </div>
                     <button
                       disabled={busy}
                       className="primary"
-                      onClick={() => setModal({ kind: "decision" })}
+                      onClick={() => showModal({ kind: "decision" })}
                     >
                       + Registrar orientação
                     </button>
@@ -636,7 +780,7 @@ function App() {
                       >
                         <div className="decision-meta">
                           <span className="status">
-                            {d.campaignId ? "Campanha" : "Permanente"}
+                            {d.projectId ? "Projeto" : "Permanente"}
                           </span>
                           <span>
                             {d.invalidatedAt ? "Invalidada" : "Válida"} ·{" "}
@@ -657,7 +801,7 @@ function App() {
                             <button
                               disabled={busy}
                               onClick={() =>
-                                setModal({
+                                showModal({
                                   kind: "decision",
                                   value: d,
                                   action: "correct",
@@ -669,7 +813,7 @@ function App() {
                             <button
                               disabled={busy}
                               onClick={() =>
-                                setModal({
+                                showModal({
                                   kind: "decision",
                                   value: d,
                                   action: "invalidate",
@@ -697,13 +841,14 @@ function App() {
                 <>
                   <div className="section-heading">
                     <div>
-                      <h2>Contexto pronto para revisar</h2>
+                      <h2>Prompt pronto para revisar</h2>
                       <p>
-                        Montado a partir dos dados salvos, sem geração por IA.
+                        Escolha o resultado. O aplicativo monta as instruções e
+                        o briefing para você copiar na outra IA.
                       </p>
                     </div>
                     <button
-                      disabled={busy}
+                      disabled={busy || !contextArtId}
                       onClick={() => {
                         if (
                           !draft ||
@@ -713,7 +858,13 @@ function App() {
                         ) {
                           run(async () => {
                             setDraft(
-                              await window.hub.context(client.id, campaign.id),
+                              await window.hub.context(
+                                client.id,
+                                campaign.id,
+                                contextArtId,
+                                contextRevisionId || null,
+                                contextOutput,
+                              ),
                             );
                             setDirty(true);
                           });
@@ -723,6 +874,65 @@ function App() {
                       Atualizar com dados atuais
                     </button>
                   </div>
+                  <div className="form-grid">
+                    <label htmlFor="context-art">
+                      Arte
+                      <select
+                        id="context-art"
+                        disabled={busy}
+                        value={contextArtId}
+                        onChange={(event) =>
+                          setContextArtId(event.target.value)
+                        }
+                      >
+                        {contextArts.map((art) => (
+                          <option key={art.id} value={art.id}>
+                            {art.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label htmlFor="context-revision">
+                      Revisão
+                      <select
+                        id="context-revision"
+                        disabled={busy}
+                        value={contextRevisionId}
+                        onChange={(event) =>
+                          setContextRevisionId(event.target.value)
+                        }
+                      >
+                        <option value="">Sem revisão</option>
+                        {contextRevisions.map((revision) => (
+                          <option key={revision.id} value={revision.id}>
+                            Revisão {revision.sequence}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <label htmlFor="context-output">Resultado desejado</label>
+                  <select
+                    id="context-output"
+                    disabled={busy}
+                    value={contextOutput}
+                    onChange={(e) =>
+                      setContextOutput(e.target.value as ContextOutput)
+                    }
+                  >
+                    <option value="art">Arte final (imagem)</option>
+                    <option value="script">Roteiro de conteúdo</option>
+                    <option value="image-prompt">
+                      Prompt para ferramenta de imagem
+                    </option>
+                    <option value="context">Somente contexto</option>
+                  </select>
+                  <p className="muted">
+                    Clique em Atualizar com dados atuais para montar o prompt. A
+                    seleção só é aplicada ao atualizar; seu rascunho é
+                    preservado. A arte será criada na outra IA, se ela oferecer
+                    geração de imagens.
+                  </p>
                   <div className="context-layout">
                     <div>
                       <label htmlFor="context">Texto do contexto</label>
@@ -747,10 +957,19 @@ function App() {
                           disabled={busy || !dirty}
                           onClick={() =>
                             run(async () => {
+                              const art = data.arts.find(
+                                (item) => item.id === contextArtId,
+                              );
+                              if (!art) throw new Error("Arte não encontrada.");
                               setData(
-                                await window.hub.update("campaign", {
-                                  ...campaign,
-                                  draft,
+                                await window.hub.update("revision", {
+                                  artId: art.id,
+                                  sourceRevisionId: contextRevisionId || null,
+                                  instructions:
+                                    "Contexto revisado manualmente.",
+                                  preserveElements: [],
+                                  modifyElements: [],
+                                  generatedContext: draft,
                                 }),
                               );
                               setDirty(false);
@@ -787,11 +1006,13 @@ function App() {
                         Copiar não envia as referências para outra ferramenta.
                       </p>
                       <ul>
-                        {refs.map((r) => (
+                        {contextRefs.map((r) => (
                           <li key={r.id}>{r.name}</li>
                         ))}
                       </ul>
-                      {!refs.length && <p>Nenhuma referência cadastrada.</p>}
+                      {!contextRefs.length && (
+                        <p>Nenhuma referência para esta arte.</p>
+                      )}
                       <p>
                         Ao alterar decisões ou a marca, atualize o texto e
                         revise novamente.
@@ -817,7 +1038,7 @@ function App() {
               modal.kind === "client"
                 ? "Cadastro de cliente"
                 : modal.kind === "campaign"
-                  ? "Cadastro de campanha"
+                  ? "Cadastro de projeto"
                   : "Orientação"
             }
             className="modal"
@@ -827,7 +1048,7 @@ function App() {
                 {modal.kind === "client"
                   ? "Informações do cliente"
                   : modal.kind === "campaign"
-                    ? "Informações da campanha"
+                    ? "Informações do projeto"
                     : modal.action === "correct"
                       ? "Corrigir orientação"
                       : modal.action === "invalidate"
@@ -896,8 +1117,8 @@ function App() {
                             Regra permanente do cliente
                           </option>
                           {campaign && (
-                            <option value="campaign">
-                              Somente esta campanha
+                            <option value="project">
+                              Somente este projeto
                             </option>
                           )}
                         </select>
@@ -975,6 +1196,313 @@ function App() {
     </div>
   );
 }
+
+function StructurePanel({
+  data,
+  projectId,
+  busy,
+  update,
+}: {
+  data: Workspace;
+  projectId: string;
+  busy: boolean;
+  update: (type: string, input: unknown) => Promise<void>;
+}) {
+  const arts = data.arts.filter((art) => art.projectId === projectId);
+  const [artId, setArtId] = useState(arts[0]?.id || "");
+  const selectedArt = arts.find((art) => art.id === artId) || arts[0];
+  const revisions = data.revisions
+    .filter((revision) => revision.artId === selectedArt?.id)
+    .sort((a, b) => a.sequence - b.sequence);
+
+  useEffect(() => {
+    if (!arts.some((art) => art.id === artId)) setArtId(arts[0]?.id || "");
+  }, [projectId, data.arts, artId, arts]);
+
+  const values = (form: HTMLFormElement) =>
+    Object.fromEntries(
+      [...new FormData(form).entries()].map(([key, value]) => [
+        key,
+        String(value).trim(),
+      ]),
+    );
+  const list = (value: string) =>
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  return (
+    <>
+      <div className="section-heading">
+        <div>
+          <h2>Modelos de arte</h2>
+          <p>Reutilize a estrutura sem alterar artes que já foram criadas.</p>
+        </div>
+      </div>
+      <form
+        className="panel"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          await update("template", {
+            id: crypto.randomUUID(),
+            ...values(event.currentTarget),
+          });
+          event.currentTarget.reset();
+        }}
+      >
+        <div className="form-grid">
+          <label>
+            Nome do modelo
+            <input name="name" required maxLength={20000} />
+          </label>
+          <label>
+            Formato
+            <input name="format" maxLength={20000} />
+          </label>
+          <label className="full">
+            Instruções do modelo
+            <textarea name="instructions" maxLength={20000} rows={2} />
+          </label>
+        </div>
+        <button className="primary" disabled={busy}>
+          Criar modelo
+        </button>
+      </form>
+      <div className="campaign-grid">
+        {data.templates.map((template) => (
+          <form
+            className="campaign-card"
+            key={template.id}
+            onSubmit={(event) => {
+              event.preventDefault();
+              return update("template", {
+                id: template.id,
+                ...values(event.currentTarget),
+              });
+            }}
+          >
+            <label>
+              Nome
+              <input name="name" defaultValue={template.name} required />
+            </label>
+            <label>
+              Formato
+              <input name="format" defaultValue={template.format} />
+            </label>
+            <label>
+              Instruções
+              <textarea
+                name="instructions"
+                defaultValue={template.instructions}
+                rows={2}
+              />
+            </label>
+            <div className="actions">
+              <button disabled={busy} type="submit">
+                Salvar modelo
+              </button>
+              <button
+                disabled={busy}
+                type="button"
+                onClick={() =>
+                  update("duplicate-template", {
+                    id: template.id,
+                    name: `${template.name} - cópia`,
+                  })
+                }
+              >
+                Duplicar
+              </button>
+            </div>
+          </form>
+        ))}
+      </div>
+
+      <div className="section-heading">
+        <div>
+          <h2>Artes do projeto</h2>
+          <p>Escolha um projeto na visão geral para organizar suas artes.</p>
+        </div>
+      </div>
+      {!projectId ? (
+        <div className="empty">
+          <p>Abra um projeto para criar artes e revisões.</p>
+        </div>
+      ) : (
+        <>
+          <form
+            className="panel"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const input = values(event.currentTarget);
+              const id = crypto.randomUUID();
+              await update("art", {
+                id,
+                projectId,
+                title: input.title,
+                format: input.format,
+                briefing: input.briefing,
+                templateId: input.templateId || null,
+                templateName: "",
+                templateInstructions: "",
+              });
+              setArtId(id);
+              event.currentTarget.reset();
+            }}
+          >
+            <div className="form-grid">
+              <label>
+                Título da arte
+                <input name="title" required maxLength={20000} />
+              </label>
+              <label>
+                Modelo
+                <select name="templateId" defaultValue="">
+                  <option value="">Em branco</option>
+                  {data.templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Formato
+                <input name="format" maxLength={20000} />
+              </label>
+              <label className="full">
+                Briefing
+                <textarea name="briefing" maxLength={20000} rows={3} />
+              </label>
+            </div>
+            <button className="primary" disabled={busy}>
+              Criar arte
+            </button>
+          </form>
+          <div className="campaign-grid">
+            {arts.map((art) => (
+              <button
+                className={`campaign-card ${art.id === selectedArt?.id ? "selected" : ""}`}
+                disabled={busy}
+                key={art.id}
+                onClick={() => setArtId(art.id)}
+              >
+                <h3>{art.title}</h3>
+                <p>{art.format || "Formato não definido"}</p>
+                <footer>{art.templateName || "Arte em branco"}</footer>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {selectedArt && (
+        <>
+          <div className="section-heading">
+            <div>
+              <h2>Revisões de {selectedArt.title}</h2>
+              <p>
+                O histórico é acrescentado; versões anteriores não são
+                sobrescritas.
+              </p>
+            </div>
+          </div>
+          <form
+            className="panel"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const input = values(event.currentTarget);
+              await update(
+                input.sourceRevisionId ? "revision-from" : "revision",
+                {
+                  artId: selectedArt.id,
+                  sourceRevisionId: input.sourceRevisionId || null,
+                  instructions: input.instructions,
+                  preserveElements: list(input.preserveElements),
+                  modifyElements: list(input.modifyElements),
+                  generatedContext: input.generatedContext,
+                },
+              );
+              event.currentTarget.reset();
+            }}
+          >
+            <div className="form-grid">
+              <label>
+                Partir de uma revisão
+                <select name="sourceRevisionId" defaultValue="">
+                  <option value="">Nova revisão</option>
+                  {revisions.map((revision) => (
+                    <option key={revision.id} value={revision.id}>
+                      Revisão {revision.sequence}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Elementos a preservar
+                <input name="preserveElements" placeholder="logotipo, cores" />
+              </label>
+              <label>
+                Elementos a modificar
+                <input name="modifyElements" placeholder="imagem principal" />
+              </label>
+              <label className="full">
+                Instruções da revisão
+                <textarea name="instructions" maxLength={20000} rows={3} />
+              </label>
+              <label className="full">
+                Contexto registrado
+                <textarea name="generatedContext" maxLength={200000} rows={4} />
+              </label>
+            </div>
+            <button className="primary" disabled={busy}>
+              Criar revisão
+            </button>
+          </form>
+          <div className="decision-list">
+            {revisions.map((revision) => (
+              <article className="decision" key={revision.id}>
+                <h3>Revisão {revision.sequence}</h3>
+                <p>{revision.instructions || "Sem instruções adicionais."}</p>
+                {!!revision.preserveElements.length && (
+                  <p>
+                    <strong>Preservar:</strong>{" "}
+                    {revision.preserveElements.join(", ")}
+                  </p>
+                )}
+                {!!revision.modifyElements.length && (
+                  <p>
+                    <strong>Modificar:</strong>{" "}
+                    {revision.modifyElements.join(", ")}
+                  </p>
+                )}
+                <small>
+                  {revision.approvedAt
+                    ? `Aprovada em ${date(revision.approvedAt)}`
+                    : revision.createdAt
+                      ? date(revision.createdAt)
+                      : "Migrada da versão 0.3.0"}
+                </small>
+                {!revision.approvedAt && (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      update("approve-revision", { id: revision.id })
+                    }
+                  >
+                    Aprovar revisão
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
